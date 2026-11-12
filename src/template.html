@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frota Arauco — Protótipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: barra superior com abas; cada aba é um painel de operação, resumo antes do detalhe. */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --ink:#18221d; --muted:#5d6b63; --line:#dde3dc;
+  --accent:#1f6b4a; --accent-soft:#e1efe7;
+  --asf:#5b6b7a; --terra:#b07a3a; --off:#7a3f1d;
+  --good:#1f7a4d; --warn:#b7791f; --crit:#b4412f; --info:#2f6fa8;
+  --g4:#2f6fa8; --sat:#7b4fb0; --buf:#b7791f;
+  --display:"IBM Plex Sans", system-ui, sans-serif; --body:"IBM Plex Sans", system-ui, sans-serif; --mono:"IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121815; --surface:#1a221e; --ink:#e6ece8; --muted:#9aa8a0; --line:#2c3732;
+    --accent:#5cc492; --accent-soft:#1f3a2d;
+    --asf:#9aabbb; --terra:#d79a52; --off:#c0703f;
+    --good:#5cc492; --warn:#e0a84a; --crit:#e5735f; --info:#6fa8dc;
+    --g4:#6fa8dc; --sat:#b48be0; --buf:#e0a84a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121815; --surface:#1a221e; --ink:#e6ece8; --muted:#9aa8a0; --line:#2c3732;
+  --accent:#5cc492; --accent-soft:#1f3a2d;
+  --asf:#9aabbb; --terra:#d79a52; --off:#c0703f;
+  --good:#5cc492; --warn:#e0a84a; --crit:#e5735f; --info:#6fa8dc;
+  --g4:#6fa8dc; --sat:#b48be0; --buf:#e0a84a;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:20px;font-weight:700}
+h2{font-size:18px;font-weight:600}
+h3{font-size:15px;font-weight:600}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono)}
+header{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 20px 0}
+.top{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.brand{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.brand small{color:var(--muted)}
+.sim{font-size:12px;background:var(--accent-soft);color:var(--accent);padding:3px 9px;border-radius:99px;font-weight:600}
+nav{display:flex;gap:4px;margin-top:12px;overflow-x:auto}
+nav a{padding:9px 14px;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+nav a.on{color:var(--ink);border-color:var(--accent)}
+nav a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{padding:20px;max-width:1240px;margin:0 auto}
+section.view{display:none;flex-direction:column;gap:18px}
+section.view.on{display:flex}
+.grid{display:grid;gap:14px}
+.k4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.c2{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
+@media (max-width:860px){.c2{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.kpi .v{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .l{color:var(--muted);font-size:13px}
+.kpi .s{font-size:13px;color:var(--muted)}
+.kpi.hl{border-left:4px solid var(--accent)}
+.lead{color:var(--muted);max-width:75ch;margin:0}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+.p-troca{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.p-desm{background:color-mix(in srgb,var(--sat) 16%,transparent);color:var(--sat)}
+.p-pool{background:color-mix(in srgb,var(--info) 16%,transparent);color:var(--info)}
+.p-rev{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.p-man{background:color-mix(in srgb,var(--muted) 14%,transparent);color:var(--muted)}
+.flag{display:inline-block;font-size:11px;color:var(--crit);border:1px solid color-mix(in srgb,var(--crit) 40%,transparent);padding:1px 6px;border-radius:4px;margin:1px 2px 1px 0;white-space:nowrap}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.filters label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:3px}
+select,input{font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);max-height:560px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:var(--surface);color:var(--muted);font-weight:600;cursor:pointer;user-select:none;z-index:1}
+th[aria-sort]::after{content:" ↕";opacity:.4}
+th[aria-sort="ascending"]::after{content:" ↑";opacity:1}
+th[aria-sort="descending"]::after{content:" ↓";opacity:1}
+td.r,th.r{text-align:right}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--accent-soft)}
+tbody tr.sel{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;display:flex;min-width:80px}
+.bar i{display:block;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.ln{width:18px;height:4px;border-radius:2px;display:inline-block}
+svg text{fill:var(--muted);font-family:var(--body)}
+.detail dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+.detail dt{color:var(--muted)}
+.detail dd{margin:0;font-variant-numeric:tabular-nums}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+button{font:inherit;font-size:14px;padding:7px 12px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button.on{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:560px){.cmp{grid-template-columns:1fr}}
+.cmp .card{gap:6px}
+.meter{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%}
+.arch{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.arch .card{border-top:4px solid var(--accent)}
+.arch .step{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:500}
+ul.clean{margin:0;padding-left:18px}
+ul.clean li{margin:3px 0}
+.note{font-size:13px;color:var(--muted)}
+.slider{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.slider input[type=range]{flex:1;min-width:180px;accent-color:var(--accent)}
+.rotas{display:grid;grid-template-columns:270px minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.rotas{grid-template-columns:1fr}}
+.vpick{position:sticky;top:10px}
+.chk{display:flex;gap:6px;align-items:center}
+.vlist{display:flex;flex-direction:column;gap:2px;max-height:640px;overflow:auto;margin:0 -6px}
+.vlink{color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.vitem{display:flex;justify-content:space-between;gap:8px;align-items:center;text-align:left;border:1px solid transparent;background:none;padding:6px 8px;font-size:13px;line-height:1.35}
+.vitem:hover{background:var(--accent-soft)} .vitem.on{background:var(--accent-soft);border-color:var(--accent)}
+.occb{background:var(--crit);color:var(--surface);border-radius:99px;font-size:12px;padding:1px 8px;font-weight:700}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;gap:6px;align-items:center;border-radius:99px;font-size:13px;padding:5px 12px}
+.chip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.sev{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:1px} .sev.crit{background:var(--crit)} .sev.warn{background:var(--warn)}
+.p-crit{background:color-mix(in srgb,var(--crit) 14%,transparent);color:var(--crit)}
+#occBody tr{cursor:pointer} #occBody tr:hover{background:var(--accent-soft)}
+.cal{display:grid;grid-template-rows:16px repeat(7,18px);gap:3px;max-width:720px}
+.cl{font-size:11px;color:var(--muted);line-height:16px}
+.cd{height:18px;padding:0;border-radius:3px;border:1px solid transparent;position:relative;cursor:pointer}
+.cd.on{outline:2px solid var(--ink);outline-offset:1px}
+.cd i{position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;border:1px solid var(--surface)} .cd i.crit{background:var(--crit)} .cd i.warn{background:var(--warn)}
+.tlist{display:flex;flex-direction:column;gap:2px;max-height:470px;overflow:auto;margin:0 -6px}
+.tl{display:flex;gap:10px;align-items:flex-start;text-align:left;border:none;background:none;padding:6px;border-radius:6px;font-size:14px;line-height:1.4}
+.tl:hover{background:var(--accent-soft)} .tl.fut{opacity:.45} .tl.bad{background:color-mix(in srgb,var(--crit) 8%,transparent)}
+.tl.drv{font-size:13px;color:var(--muted)}
+.tn{flex:none;width:22px;height:22px;border-radius:50%;color:var(--surface);font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.tn.ln{height:4px;border-radius:2px;margin-top:9px}
+.sm{display:none}
+@media (max-width:640px){
+  .lg{display:none} .sm{display:inline}
+  nav{gap:0;justify-content:space-between} nav a{padding:9px 4px;font-size:13px}
+  header{padding:12px 14px 0} main{padding:14px}
+  .k4{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .kpi .v{font-size:21px} .card{padding:13px}
+  .occtbl thead{display:none}
+  .occtbl tr{display:grid;grid-template-columns:auto auto 1fr;gap:3px 8px;padding:9px 10px;border-bottom:1px solid var(--line)}
+  .occtbl td{border:none;padding:0;white-space:normal}
+  .occtbl td:nth-child(4){grid-column:1/3} .occtbl td:nth-child(6){grid-column:3;text-align:right} .occtbl td:nth-child(5){grid-column:1/-1;font-size:13px;color:var(--muted)}
+  #tbl th:not(:nth-child(1)):not(:nth-child(10)):not(:nth-child(11)), #tbl td:not(:nth-child(1)):not(:nth-child(10)):not(:nth-child(11)){display:none}
+  #tbl td:nth-child(1) .flag{display:none}
+  #tbl th,#tbl td{padding:7px 6px;font-size:12.5px} #tbl th[aria-sort]::after{content:""} #tbl td:nth-child(1) .note{display:block}
+  .tablewrap{max-height:420px}
+}
+.why{background:color-mix(in srgb,var(--sat) 7%,transparent);border-left:3px solid var(--sat);border-radius:6px;padding:10px 14px;display:flex;flex-direction:column;gap:6px}
+.oglist{display:flex;flex-direction:column;gap:8px}
+.og{display:grid;grid-template-columns:200px minmax(0,1fr) 150px;gap:14px;align-items:center;text-align:left;padding:12px 14px;border-left:4px solid var(--crit);font-size:14px;line-height:1.45}
+.og.warn{border-left-color:var(--warn)} .og:hover{background:var(--accent-soft)}
+.og-l{text-align:right} .lnk{color:var(--accent);font-weight:600}
+.back{color:var(--accent);text-decoration:none;font-weight:600}
+.mini{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.mini>div{display:flex;flex-direction:column;background:var(--bg);border-radius:8px;padding:8px 12px}
+.mini b{font-size:17px}
+.occsum{display:flex;gap:6px;flex-wrap:wrap} .occsum .pill{white-space:normal}
+.hist{display:grid;grid-template-columns:230px minmax(0,1fr) 320px;gap:16px;align-items:start}
+@media (max-width:1150px){.hist{grid-template-columns:220px minmax(0,1fr)} .sidecol{grid-column:1/-1}}
+@media (max-width:760px){.hist{grid-template-columns:1fr} .og{grid-template-columns:1fr;gap:6px} .og-l{text-align:left}}
+.chk[hidden]{display:none}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;width:max-content}
+.seg button{border:none;border-radius:0;padding:5px 12px;font-size:13px}
+.calhead{display:flex;justify-content:space-between;align-items:center;gap:8px;text-transform:capitalize}
+.calnav{padding:2px 10px;font-size:18px;line-height:1.2} .calnav:disabled{opacity:.3;cursor:default}
+.mcal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.mw{font-size:11px;color:var(--muted);text-align:center}
+.mc{aspect-ratio:1;padding:0;font-size:12px;border-radius:5px;border:1px solid var(--line);position:relative;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums;color:var(--ink);min-height:28px}
+.mc.out{opacity:.3;border-style:dashed;background:none}
+.mc.on{outline:2.5px solid var(--ink);outline-offset:1px;font-weight:700;color:var(--ink)}
+.mc i{position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:var(--crit);border:1px solid var(--surface)}
+.calleg{font-size:11px;gap:8px}
+.daycol{display:flex;flex-direction:column;gap:6px}
+.daylist{display:flex;flex-direction:column;gap:2px;max-height:620px;overflow:auto;margin:0 -4px}
+@media (max-width:760px){.daylist{max-height:260px}}
+.dayrow{text-align:left;border:1px solid transparent;background:none;padding:6px 8px;font-size:13px;line-height:1.35}
+.dayrow:hover{background:var(--accent-soft)} .dayrow.on{background:var(--accent-soft);border-color:var(--accent)}
+.dayrow.on,.vitem.on,.chip.on{color:var(--ink)}
+.dayrow.off{opacity:.55} .dayrow.bad{box-shadow:inset 3px 0 0 var(--crit)}
+.mapcol,.sidecol{display:flex;flex-direction:column;gap:10px;min-width:0}
+.occlist{display:flex;flex-direction:column;gap:4px;max-height:260px;overflow:auto}
+.occi{text-align:left;border-left:3px solid var(--crit);font-size:13px} .occi.warn{border-left-color:var(--warn)}
+@media (max-width:640px){ .acao{grid-template-columns:1fr auto !important} .acao .bar{display:none} .vpick{position:static} .vlist{max-height:240px} }
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div class="brand"><h1>Frota Arauco</h1><small>protótipo · Pampa Devs</small></div>
+    <span class="sim">Dados simulados · 420 veículos · últimos 90 dias</span>
+  </div>
+  <nav aria-label="Seções">
+    <a href="#visao" data-v="visao"><span class="lg">Visão geral</span><span class="sm">Visão</span></a>
+    <a href="#ocorrencias" data-v="ocorrencias"><span class="lg">Ocorrências</span><span class="sm">Ocorrências</span></a>
+    <a href="#veiculos" data-v="veiculos"><span class="lg">Veículos</span><span class="sm">Veículos</span></a>
+    
+    <a href="#conectividade" data-v="conectividade"><span class="lg">Conectividade offline</span><span class="sm">Conectividade</span></a>
+    <a href="#dados" data-v="dados"><span class="lg">Dados e próximos passos</span><span class="sm">Dados</span></a>
+  </nav>
+</header>
+<main>
+
+<!-- VISÃO GERAL -->
+<section class="view" id="v-visao">
+  <p class="lead">Telemetria, cartão combustível, manutenção, pedágio, multas, contratos e RH cruzados num lugar só. A partir do uso real de cada veículo, o painel diz quantos veículos a operação realmente precisa e quais podem sair.</p>
+  <div class="grid k4" id="kpis"></div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline"><h2>Plano de economia</h2><span class="note num" id="planoTot"></span></div>
+    <div id="plano" class="grid" style="gap:10px"></div>
+  </div>
+  <div class="grid c2">
+    <div class="card">
+      <h2>Tamanho de frota necessário</h2>
+      <p class="note" style="margin:0">Veículos em uso por dia nos últimos 90 dias. A frota necessária cobre o pico de uso (95% dos dias) de cada unidade, com 8% de reserva.</p>
+      <div id="useChart" style="overflow-x:auto"></div>
+      <div class="legend"><span><i class="ln" style="background:var(--accent)"></i>Em uso no dia</span><span><i class="ln" style="background:var(--crit)"></i>Frota atual</span><span><i class="ln" style="background:var(--ink)"></i>Frota necessária</span></div>
+      <h3 style="margin-top:8px">Por tipo de veículo</h3>
+      <div id="typeBars"></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline"><h2>Veículos para desmobilizar</h2><button type="button" data-go="Desmobilizar">Ver todos</button></div>
+      <p class="note" style="margin:0">Os menos usados de cada unidade, acima do tamanho necessário. Devolução à locadora; a demanda passa para o pool da unidade.</p>
+      <div class="tablewrap" style="max-height:430px"><table><thead><tr><th>Veículo</th><th>Unidade</th><th class="r">Dias de uso</th><th class="r">Economia/mês</th></tr></thead><tbody id="desmTop"></tbody></table></div>
+    </div>
+  </div>
+  <div class="grid c2">
+    <div class="card">
+      <h2>Quem realmente precisa de caminhonete</h2>
+      <p class="note" style="margin:0">Cada ponto é uma caminhonete. Canto inferior esquerdo: roda quase só no asfalto e quase nunca entra no talhão.</p>
+      <div id="scatter" style="overflow-x:auto"></div>
+      <div class="legend" id="scLegend"></div>
+    </div>
+    <div class="card">
+      <h2>Por unidade</h2>
+      <p class="note" style="margin:0">Frota atual × necessária e economia mensal.</p>
+      <div id="bars"></div>
+      <h3 style="margin-top:6px">Alertas para auditoria</h3>
+      <div id="alerts" class="grid" style="gap:8px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- VEÍCULOS -->
+<section class="view" id="v-veiculos">
+  <div class="filters">
+    <label for="fTipo">Tipo<select id="fTipo"><option value="">Todos</option><option>Caminhonete</option><option>Carro</option><option>Van</option></select></label>
+    <label for="fRec">Recomendação<select id="fRec"><option value="">Todas</option><option>Desmobilizar</option><option>Trocar por carro</option><option>Revisar alocação</option><option>Manter</option></select></label>
+    <label for="fUn">Unidade<select id="fUn"><option value="">Todas</option></select></label>
+    <label for="fFlag">Alertas<select id="fFlag"><option value="">Todos</option><option value="1">Só com alerta</option></select></label>
+    <label for="fQ">Buscar<input id="fQ" placeholder="ID ou placa"></label>
+    <span class="note num" id="count"></span>
+  </div>
+  <p class="note" style="margin:0">Clique num veículo para abrir a página dele, com o histórico de trajetos dos últimos 90 dias.</p>
+  <div>
+    <div class="tablewrap"><table id="tbl"><thead><tr>
+      <th data-k="id">Veículo</th><th data-k="tipo">Tipo</th><th data-k="unidade">Unidade</th>
+      <th data-k="km" class="r">km/mês</th><th data-k="fora">Terreno</th><th data-k="dias_talhao" class="r">Dias em talhão</th><th data-k="dias_uso" class="r">Dias de uso</th>
+      <th data-k="total" class="r">Custo/mês</th><th data-k="ckm" class="r">R$/km</th><th data-k="rec">Recomendação</th><th data-k="eco" class="r" aria-sort="descending">Economia/mês</th><th data-k="occ" class="r">Ocorrências</th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>
+</section>
+
+<!-- OCORRÊNCIAS -->
+<section class="view" id="v-ocorrencias">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:end">
+      <div><h2>Ocorrências dos últimos 90 dias</h2><p class="note" id="occInfo" style="margin:4px 0 0;max-width:70ch"></p></div>
+      <label for="ocQ" class="note" style="display:flex;flex-direction:column;gap:3px">Buscar veículo<input id="ocQ" placeholder="ID ou placa" autocomplete="off"></label>
+    </div>
+    <div class="chips" id="occChips"></div>
+    <div id="occGroupsEl" class="oglist"></div>
+  </div>
+</section>
+
+<!-- PÁGINA DO VEÍCULO -->
+<section class="view" id="v-veiculo"><div id="vpage" class="grid" style="gap:14px"></div></section>
+
+<!-- CONECTIVIDADE -->
+<section class="view" id="v-conectividade">
+  <p class="lead">O sistema atual (LETS) só transmite quando o veículo encontra Wi-Fi. No campo isso significa horas de atraso, e dados perdidos quando a memória enche. A proposta é que nada dependa de sinal para ser registrado: tudo é gravado no veículo e sobe pelo melhor canal disponível.</p>
+  <div class="grid k4" id="conKpis"></div>
+  <h2>Arquitetura proposta: grava sempre, envia quando der</h2>
+  <div class="arch">
+    <div class="card"><span class="step">1 · VEÍCULO</span><h3>Rastreador híbrido 4G + satélite</h3>
+      <ul class="clean"><li>GPS + leitura do CAN (km, rotação, marcha lenta, consumo)</li><li>Memória interna: grava tudo mesmo sem sinal e descarrega depois (store-and-forward)</li><li>Satélite (ex.: Iridium) só para o essencial: posição a cada 15–30 min e alertas</li></ul></div>
+    <div class="card"><span class="step">2 · CONDUTOR</span><h3>App offline-first</h3>
+      <ul class="clean"><li>Motivo do deslocamento, checklist, abastecimento, ocorrência</li><li>Banco local no celular; sincroniza por 4G, Wi-Fi ou Starlink, o que aparecer primeiro</li><li>Substitui o fluxo que hoje só funciona no Wi-Fi</li></ul></div>
+    <div class="card"><span class="step">3 · BASES</span><h3>Pontos de sincronização</h3>
+      <ul class="clean"><li>Wi-Fi ou Starlink nas bases das unidades florestais e na fábrica</li><li>Descarga completa do dia quando o veículo chega</li><li>Também atualiza o app e as cercas geográficas</li></ul></div>
+    <div class="card"><span class="step">4 · PLATAFORMA</span><h3>Unificação dos dados</h3>
+      <ul class="clean"><li>Recebe dados atrasados e fora de ordem sem duplicar (chave: dispositivo + horário do evento)</li><li>Cruza com cartão combustível, manutenção, pedágio, multas, locadora e RH (Senior/SAP)</li><li>Classifica terreno: cercas + malha viária + velocidade</li></ul></div>
+    <div class="card"><span class="step">5 · DECISÃO</span><h3>Análise e recomendações</h3>
+      <ul class="clean"><li>Custo por km e por tipo de uso</li><li>Lista nominal: trocar, compartilhar, revisar</li><li>Alertas: consumo anômalo, fim de semana, rota fora do padrão</li><li>Dashboards no BI que a Arauco já usa</li></ul></div>
+  </div>
+  <div class="grid c2">
+    <div class="card">
+      <h2>Quanto da frota fica "no escuro"</h2>
+      <p class="note" style="margin:0">Percentual do tempo rodando sem 4G, por perfil de uso (simulado).</p>
+      <div id="covBars"></div>
+    </div>
+    <div class="card">
+      <h2>Decisões de hardware a validar</h2>
+      <ul class="clean">
+        <li><b>Primeiro, ver o que já existe:</b> o rastreador atual pode só precisar de um plano satelital ativado.</li>
+        <li><b>Satélite só para quem vai a campo:</b> caminhonetes de campo e vans de rota florestal; carros urbanos ficam só no 4G.</li>
+        <li><b>Política de envio:</b> satélite cobra por mensagem, então envia pouco (posição espaçada + pânico/acidente) e o resto vai na descarga.</li>
+        <li><b>Starlink nas bases</b> resolve a sincronização completa e serve outros projetos (segurança, app de alimentação).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- DADOS -->
+<section class="view" id="v-dados">
+  <div class="grid c2">
+    <div class="card">
+      <h2>O que o protótipo assume e de onde viria cada dado</h2>
+      <div class="tablewrap" style="max-height:none"><table><thead><tr><th>Dado</th><th>Fonte provável</th><th>Usado para</th></tr></thead><tbody>
+        <tr><td>Posições GPS e eventos</td><td>Rastreador (atual ou híbrido novo)</td><td>Km por terreno, talhão, restaurante</td></tr>
+        <tr><td>Cercas geográficas</td><td>Sistema de rastreamento / GIS florestal</td><td>Fazendas, talhões, fábrica, restaurantes</td></tr>
+        <tr><td>Malha viária florestal</td><td>GIS da Arauco ou OpenStreetMap</td><td>Asfalto × terra × fora de estrada</td></tr>
+        <tr><td>Abastecimentos</td><td>Cartão combustível</td><td>Custo/km, consumo anômalo</td></tr>
+        <tr><td>Ordens de serviço</td><td>Gestão de frota / locadora</td><td>Manutenção por tipo de uso</td></tr>
+        <tr><td>Pedágio e multas</td><td>Tag de pedágio, relatório de multas</td><td>Uso fora do padrão</td></tr>
+        <tr><td>Contratos de locação</td><td>Locadora</td><td>Quanto da economia é realizável e quando</td></tr>
+        <tr><td>Cargo e área do condutor</td><td>RH (Senior/SAP)</td><td>Justificar a caminhonete pela função</td></tr>
+        <tr><td>Motivo do deslocamento</td><td>App do condutor (novo, offline)</td><td>Separar campo, reunião e almoço</td></tr>
+      </tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>Regras usadas nas recomendações</h2>
+      <ul class="clean">
+        <li><span class="pill p-troca">Trocar por carro</span> caminhonete com menos de 15% do km fora do asfalto e entrada em talhão em menos de 20% dos dias.</li>
+        <li><span class="pill p-desm">Desmobilizar</span> por unidade e tipo, a frota necessária é o pico de uso diário (95% dos dias) mais 8% de reserva. Os veículos menos usados acima disso saem. Pressupõe pool por unidade, com reserva de veículo. A economia conta só locação e 30% da manutenção, porque o combustível passa para outro veículo.</li>
+        <li><span class="pill p-rev">Revisar alocação</span> carro comum rodando mais de 22% em estrada de terra.</li>
+        <li><span class="pill p-man">Manter</span> uso de campo real.</li>
+      </ul>
+      <p class="note">Os limites são ajustáveis com o time do Pedro. Restrições de segurança (exigência de 4x4 em área florestal) e multas de contrato da locadora entram como filtro antes da recomendação final.</p>
+      <h2>Próximos passos</h2>
+      <ol class="clean" style="padding-left:20px">
+        <li>Amostra real: cadastro dos 420 + 1 mês de telemetria e custos de 30–50 veículos.</li>
+        <li>Rodar este mesmo modelo sobre a amostra e validar os achados com o Pedro.</li>
+        <li>Diagnóstico completo (12 meses) com lista nominal e economia por unidade.</li>
+        <li>Piloto de conectividade: 10 caminhonetes de campo com rastreador híbrido + app offline em uma unidade.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+const V = __DATA__;
+const RES = __RES__;
+const brl = n => "R$ " + Math.round(n).toLocaleString("pt-BR");
+const brlk = n => n >= 1e6 ? "R$ " + (n/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi" : "R$ " + Math.round(n/1000).toLocaleString("pt-BR") + " mil";
+const pct = n => Math.round(n*100) + "%";
+const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+V.forEach(v => { v.fora = v.terra + v.off; v.ckm = v.total / v.km; });
+const PILL = {"Desmobilizar":"p-desm","Trocar por carro":"p-troca","Revisar alocação":"p-rev","Manter":"p-man"};
+const REC_COLOR = {"Desmobilizar":"--sat","Trocar por carro":"--good","Revisar alocação":"--warn","Manter":"--muted"};
+const UNS = ["Fábrica","UF Norte","UF Sul","UF Leste","UF Oeste"];
+
+/* ---------- roteamento ---------- */
+const views = ["visao","ocorrencias","veiculos","veiculo","conectividade","dados"];
+function route(){
+  let h = location.hash.replace("#","");
+  let vid=null; if(h.startsWith("veiculo-")){ vid=h.slice(8); h="veiculo"; }
+  if(!views.includes(h) || h==="veiculo"&&!vid) h = "visao";
+  views.forEach(v => document.getElementById("v-"+v).classList.toggle("on", v===h));
+  const navOn = h==="veiculo" ? "veiculos" : h;
+  document.querySelectorAll("nav a").forEach(a => { const on = a.dataset.v===navOn; a.classList.toggle("on", on); a.setAttribute("aria-current", on ? "page" : "false"); });
+  if(vid) setTimeout(()=>openVehicle(vid));
+}
+addEventListener("hashchange", route); route();
+
+/* ---------- motor de rotas simuladas (90 dias por veículo) ---------- */
+const GEO = __GEO__;
+const X = lon => (lon-GEO.LON0)*GEO.C*GEO.K, Y = lat => (GEO.LAT1-lat)*GEO.K;
+const PT = ([lat,lon]) => [X(lon), Y(lat)];
+const KM_U = GEO.kmPerUnit;
+const dist = (a,b) => Math.hypot(...[0,1].map(i=>PT(a)[i]-PT(b)[i]))*KM_U;
+const D0 = new Date(2026,7,14);
+const NDIAS = 90;
+const dateOf = d => new Date(D0.getFullYear(), D0.getMonth(), D0.getDate()+d);
+const WD = ["dom","seg","ter","qua","qui","sex","sáb"];
+const fmtDia = d => { const t=dateOf(d); return `${WD[t.getDay()]} ${String(t.getDate()).padStart(2,"0")}/${String(t.getMonth()+1).padStart(2,"0")}`; };
+const isWeekday = d => { const w=dateOf(d).getDay(); return w>0 && w<6; };
+const hhmm = h => { const m=Math.round(h*60); return `${String(Math.floor(m/60)%24).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`; };
+const durTxt = h => { const m=Math.round(h*60); return m>=60?`${Math.floor(m/60)}h${String(m%60).padStart(2,"0")}`:`${m} min`; };
+function hashStr(s){ let h=2166136261; for(const c of s){ h^=c.charCodeAt(0); h=Math.imul(h,16777619);} return h>>>0; }
+function rngOf(seed){ let a=seed>>>0; return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+// malha viária (nós em lat/lon)
+const N = {
+  VILA:[-19.715,-51.940], INO:[-19.727,-51.928], OFF:[-19.721,-51.919], REST:[-19.735,-51.922], POSTO:[-19.743,-51.913],
+  A1:[-19.84,-51.97], BAR:[-19.90,-52.01], A2:[-19.96,-52.05], FAB:[-20.06,-52.13],
+  APP:[-20.112,-52.142], L1:[-20.02,-52.06], BL:[-19.98,-52.0],
+  O1:[-20.12,-52.24], O2:[-20.18,-52.36], BO:[-20.25,-52.45],
+  N1:[-19.66,-51.82], BN:[-19.55,-51.70], FAZ:[-19.632,-51.866],
+  S1:[-20.18,-51.95], BS:[-20.30,-51.80],
+  B1:[-19.85,-52.10], BAL:[-19.842,-52.222],
+};
+const EDGES = [
+  ["VILA","INO","a"],["INO","OFF","a"],["INO","REST","a"],["REST","POSTO","a"],["INO","A1","a"],["A1","BAR","a"],["BAR","A2","a"],["A2","FAB","a"],
+  ["FAB","APP","t"],["FAB","L1","t"],["L1","BL","t"],["FAB","O1","t"],["O1","O2","t"],["O2","BO","t"],
+  ["INO","N1","t"],["N1","BN","t"],["N1","FAZ","t"],["FAB","S1","t"],["S1","BS","t"],["A1","B1","t"],["B1","BAL","t"],
+];
+const ADJ = {}; EDGES.forEach(([a,b,t])=>{ const d=dist(N[a],N[b]); (ADJ[a]=ADJ[a]||[]).push([b,d,t]); (ADJ[b]=ADJ[b]||[]).push([a,d,t]); });
+const PATHC = {};
+function rota(a,b){
+  const k=a+">"+b; if(PATHC[k]) return PATHC[k];
+  const D={},P={},Q=new Set(Object.keys(N)); Object.keys(N).forEach(n=>D[n]=Infinity); D[a]=0;
+  while(Q.size){ let u=null; Q.forEach(n=>{ if(u===null||D[n]<D[u]) u=n; }); Q.delete(u); if(u===b) break; (ADJ[u]||[]).forEach(([w,d])=>{ if(D[u]+d<D[w]){ D[w]=D[u]+d; P[w]=u; } }); }
+  const path=[b]; while(path[0]!==a) path.unshift(P[path[0]]);
+  return PATHC[k]=path;
+}
+const edgeType = (a,b) => (ADJ[a].find(e=>e[0]===b)||[0,0,"a"])[2];
+
+// locais
+const PLACES = {
+  VILA:{n:"Vila Arauco",k:"casa"}, INO:{n:"Inocência (centro)",k:"casa"}, OFF:{n:"Escritório Arauco Inocência",k:"trabalho"},
+  REST:{n:"Restaurante credenciado",k:"refeicao"}, POSTO:{n:"Posto credenciado",k:"posto"},
+  FAB:{n:"Fábrica Sucuriú",k:"trabalho"}, BL:{n:"Base UF Leste",k:"trabalho"}, BO:{n:"Base UF Oeste",k:"trabalho"}, BN:{n:"Base UF Norte",k:"trabalho"}, BS:{n:"Base UF Sul",k:"trabalho"},
+  BAR:{n:"Bar e conveniência (MS-377)",k:"proibido",why:"parada não autorizada durante o expediente"},
+  FAZ:{n:"Fazenda Boa Vista (terceiros)",k:"proibido",why:"propriedade de terceiros, sem contrato com a Arauco"},
+  APP:{n:"APP margem do Sucuriú",k:"proibido",why:"área de preservação permanente, acesso proibido"},
+  BAL:{n:"Balneário do Sucuriú",k:"proibido",why:"lazer com veículo da empresa"},
+};
+const UNIT_BASE = {"Fábrica":"FAB","UF Norte":"BN","UF Sul":"BS","UF Leste":"BL","UF Oeste":"BO"};
+const BASE_CODE = {BN:"N",BS:"S",BL:"L",BO:"O",FAB:"F"};
+// talhões ao redor de cada base
+const TALHOES = [];
+[["BN",[[0.03,-0.05],[0.05,0.03],[-0.02,0.06]]],["BS",[[0.04,-0.06],[-0.04,0.03],[-0.05,-0.05]]],["BL",[[0.05,0.03],[-0.01,0.07],[0.06,-0.04]]],["BO",[[0.05,-0.02],[-0.04,-0.05],[-0.05,0.05]]]].forEach(([b,offs])=>{
+  offs.forEach(([dl,dn],i)=>{
+    const c=[N[b][0]+dl, N[b][1]+dn], h=0.013, w=0.02, r=(i-1)*0.25;
+    const quad=[[-h,-w],[-h,w],[h,w],[h,-w]].map(([y,x])=>[c[0]+y*Math.cos(r)+x*Math.sin(r)*0.5, c[1]+x*Math.cos(r)-y*Math.sin(r)]);
+    TALHOES.push({base:b, id:`${BASE_CODE[b]}-${String(3+i*4+(b.charCodeAt(1)%3)).padStart(2,"0")}`, c, quad});
+  });
+});
+const COV = [{c:N.INO,r:15},{c:N.FAB,r:6}];
+const WIFI = ["FAB","BN","BS","BL","BO"];
+const inCov = ll => COV.some(z=>dist(ll,z.c)<=z.r);
+const atWifi = ll => WIFI.some(k=>dist(ll,N[k])<=1.5);
+
+// veículos com comportamento suspeito (plantado na simulação)
+const ANOM = {};
+(function(){
+  const by = f => V.filter(f).sort((a,b)=>a.id.localeCompare(b.id));
+  const pick = (arr,n,tag) => arr.filter(v=>!ANOM[v.id]).slice(0,n).forEach(v=>ANOM[v.id]=tag);
+  pick(by(v=>v.tipo==="Caminhonete"&&v.perfil==="urbano"&&v.unidade==="Fábrica"&&v.rec!=="Desmobilizar"),2,"bar");
+  pick(by(v=>v.tipo==="Carro"&&v.unidade==="Fábrica"&&v.rec!=="Desmobilizar"),1,"bar");
+  pick(by(v=>v.perfil==="campo"&&v.unidade==="UF Oeste"),1,"app");
+  pick(by(v=>v.tipo==="Caminhonete"&&v.unidade==="UF Norte"&&v.perfil!=="urbano"),1,"faz");
+  pick(by(v=>v.flags.includes("Uso em fim de semana")),3,"noite");
+  pick(by(v=>v.perfil==="campo"&&v.unidade==="UF Sul"),2,"vel");
+})();
+
+// plano do dia
+function planDay(v,d){
+  const rng=rngOf(hashStr(v.id)+d*7919);
+  const home = v.tipo==="Van" ? "INO" : (hashStr(v.id)%3===0?"INO":"VILA");
+  const used = v.uso[d]==="1";
+  const anom = ANOM[v.id];
+  const P={d, used, home, ev:[]};
+  let cur=home, t=0;
+  const spd = { a:()=>70+rng()*20, t:()=>(anom==="vel"&&rng()<0.12?62+rng()*14:32+rng()*16), o:()=>10+rng()*8 };
+  const go = to => {
+    if(to===cur) return; const path=rota(cur,to); const legs=[];
+    let t0=t;
+    for(let i=0;i<path.length-1;i++){ const ty=edgeType(path[i],path[i+1]); const km=dist(N[path[i]],N[path[i+1]]); const s=spd[ty](); legs.push({a:path[i],b:path[i+1],ty,km,s,t0:t}); t+=km/s; }
+    P.ev.push({k:"drive",from:cur,to,legs,t0,t1:t,km:legs.reduce((s,l)=>s+l.km,0),vmax:Math.max(...legs.map(l=>l.s))}); cur=to;
+  };
+  const stop = h => { P.ev.push({k:"stop",at:cur,t0:t,t1:t+h}); t+=h; };
+  const field = tal => { const h=0.8+rng()*1.4; const km=4+rng()*9; P.ev.push({k:"field",at:tal.id,tal,base:cur,t0:t,t1:t+h,km,seed:Math.floor(rng()*1e9)}); t+=h; };
+  const base = UNIT_BASE[v.unidade]==="FAB" && v.perfil!=="urbano" ? "BL" : UNIT_BASE[v.unidade];
+  const talOf = b => TALHOES.filter(x=>x.base===b);
+
+  // uso noturno (fim de semana) — não depende do dia útil
+  if(anom==="noite" && !isWeekday(d) && rng()<0.55){ t=0.8+rng()*1.2; go("BAL"); stop(1+rng()*1.5); go(home); P.night=true; }
+  if(!used && !P.ev.length) return P;
+  if(!used){ P.used=true; return P; }
+
+  t = (P.ev.length? Math.max(t,6.2):6.2) + rng()*1.1;
+  if(rng()<0.15){ go("POSTO"); stop(0.15+rng()*0.1); }
+  const p = v.perfil;
+  if(v.tipo==="Van"){
+    for(let c=0;c<2;c++){ go("VILA"); stop(0.15); go("FAB"); stop(0.3); go(base==="FAB"?"BL":base); stop(0.3); go("FAB"); stop(c===0?2.6:0.4); }
+    go("INO");
+  } else if(p==="campo"){
+    if(rng()<0.4){ go("FAB"); stop(0.3+rng()*0.4); }
+    go(base); stop(0.25+rng()*0.3);
+    const ts=talOf(base); const n=1+Math.floor(rng()*2.6);
+    for(let i=0;i<n;i++){ field(ts[Math.floor(rng()*ts.length)]); if(i===0){ stop(0.6+rng()*0.4); } }
+    if(anom==="app" && rng()<0.3){ go("APP"); stop(0.5+rng()*1.2); }
+    go(base); stop(0.3+rng()*0.5); go(home);
+  } else if(p==="misto"){
+    go("FAB"); stop(1.5+rng()*1.5);
+    if(rng()<0.35){ go(base); const ts=talOf(base); if(ts.length) field(ts[Math.floor(rng()*ts.length)]); if(anom==="faz"&&rng()<0.6){ go("FAZ"); stop(1+rng()*1.2); } go("FAB"); }
+    else if(anom==="faz"&&rng()<0.25){ go("FAZ"); stop(1+rng()*1.2); go("FAB"); }
+    if(rng()<0.5){ go("REST"); stop(1+rng()*0.3); go("FAB"); }
+    stop(2+rng()*1.5); go(home);
+  } else if(p==="carro_terra"){
+    go(base); stop(3+rng()); if(rng()<0.4){ go("REST"); stop(1); go(base); } stop(3+rng()); go(home);
+  } else { // urbano
+    const work = v.unidade==="Fábrica" ? "FAB" : "OFF";
+    go(work); stop(3.8+rng()*0.7);
+    if(rng()<0.7){ go("REST"); stop(1+rng()*0.35); go(work); } else stop(1);
+    if(anom==="bar" && rng()<0.7){ const h0=t; go("BAR"); stop(0.35+rng()*0.5); go(work); }
+    stop(Math.max(0.5, 17.2+rng()*0.8 - t)); go(home);
+  }
+  return P;
+}
+
+// ocorrências de um plano
+function occOf(v,P){
+  const out=[];
+  P.ev.forEach(e=>{
+    if(e.k==="stop" && PLACES[e.at]?.k==="proibido") out.push({v:v.id,d:P.d,t:e.t0,dur:e.t1-e.t0,tipo:"Parada em local proibido",key:e.at,local:PLACES[e.at].n,why:PLACES[e.at].why,sev:"crit"});
+  });
+  // uso fora do horário: uma ocorrência por dia, do primeiro ao último deslocamento noturno
+  const noite=P.ev.filter(e=>e.k==="drive"&&(e.t0<5||e.t0>=22));
+  if(noite.length){ const dest=[...new Set(noite.map(e=>e.to).filter(k=>k!==P.home))]; const t0=noite[0].t0, t1=noite.at(-1).t1;
+    out.push({v:v.id,d:P.d,t:t0,dur:t1-t0,tipo:"Uso fora do horário",key:dest[0]||"",local:dest.length?`foi até ${dest.map(k=>PLACES[k]?.n||k).join(", ")}`:"deslocamento noturno",why:"veículo ligado entre 22h e 5h",sev:"crit"}); }
+  // velocidade: uma ocorrência por dia, com a maior velocidade
+  const fast=P.ev.filter(e=>e.k==="drive").flatMap(e=>e.legs).filter(l=>l.ty==="t"&&l.s>60);
+  if(fast.length){ const l=fast.reduce((a,b)=>b.s>a.s?b:a); out.push({v:v.id,d:P.d,t:l.t0,dur:fast.reduce((s,x)=>s+x.km/x.s,0),tipo:"Velocidade em estrada de terra",key:"vel",local:`até ${Math.round(l.s)} km/h na estrada de terra (limite 60)`,why:`${fast.length} trecho${fast.length>1?"s":""} acima de 60 km/h`,sev:"warn"}); }
+  return out;
+}
+// ocorrências da frota inteira
+const OCC=[]; const OCC_BY={};
+V.forEach(v=>{ v.occ=0; for(let d=0;d<NDIAS;d++){ const P=planDay(v,d); occOf(v,P).forEach(o=>{ OCC.push(o); v.occ++; }); } });
+OCC.sort((a,b)=>b.d-a.d||a.t-b.t);
+
+// pontos de GPS a partir do plano (a cada ~0,7 km ou 3 min)
+function pointsOf(P){
+  const pts=[];
+  P.ev.forEach(e=>{
+    if(e.k==="drive"){ e.legs.forEach(l=>{ const n=Math.max(1,Math.round(l.km/0.7)); for(let k=0;k<n;k++){ const f=k/n; const ll=[N[l.a][0]+(N[l.b][0]-N[l.a][0])*f, N[l.a][1]+(N[l.b][1]-N[l.a][1])*f]; pts.push({ll,t:l.t0+(l.km/l.s)*f,ty:l.ty,s:l.s}); } }); }
+    else if(e.k==="field"){ const r=rngOf(e.seed); const q=e.tal.quad; const n=Math.max(8,Math.round(e.km/0.4)); const bq=N[e.base];
+      const pin=(u,w)=>{ const top=[q[0][0]+(q[1][0]-q[0][0])*u, q[0][1]+(q[1][1]-q[0][1])*u], bot=[q[3][0]+(q[2][0]-q[3][0])*u, q[3][1]+(q[2][1]-q[3][1])*u]; return [top[0]+(bot[0]-top[0])*w, top[1]+(bot[1]-top[1])*w]; };
+      const m=Math.round(n*0.15); for(let k=0;k<m;k++){ const f=k/m; const c=e.tal.c; pts.push({ll:[bq[0]+(c[0]-bq[0])*f,bq[1]+(c[1]-bq[1])*f],t:e.t0+(e.t1-e.t0)*0.1*f,ty:"t",s:30}); }
+      let u=0.5,w=0.5; for(let k=0;k<n;k++){ u=Math.min(0.95,Math.max(0.05,u+(r()-0.5)*0.35)); w=Math.min(0.95,Math.max(0.05,w+(r()-0.5)*0.35)); pts.push({ll:pin(u,w),t:e.t0+(e.t1-e.t0)*(0.1+0.8*k/n),ty:"o",s:12+r()*6}); }
+      for(let k=0;k<=m;k++){ const f=k/m; const c=e.tal.c; pts.push({ll:[c[0]+(bq[0]-c[0])*f,c[1]+(bq[1]-c[1])*f],t:e.t0+(e.t1-e.t0)*(0.9+0.1*f),ty:"t",s:30}); }
+    } else { const ll=N[e.at]; for(let tt=e.t0; tt<e.t1; tt+=0.25) pts.push({ll,t:tt,ty:"p",s:0,stop:true}); pts.push({ll,t:e.t1,ty:"p",s:0,stop:true}); }
+  });
+  pts.forEach(q=>{ q.p=PT(q.ll); q.cov=inCov(q.ll); q.wifi=atWifi(q.ll); });
+  return pts;
+}
+function dayStats(P){
+  let km=0, drive=0, kmT={a:0,t:0,o:0}, stops=0, idle=0;
+  P.ev.forEach(e=>{ if(e.k==="drive"){ km+=e.km; drive+=e.t1-e.t0; e.legs.forEach(l=>kmT[l.ty]+=l.km); } else if(e.k==="field"){ km+=e.km; drive+=(e.t1-e.t0)*0.7; kmT.o+=e.km*0.8; kmT.t+=e.km*0.2; } else { stops++; idle+=e.t1-e.t0; } });
+  return {km, drive, kmT, stops, idle, ini:P.ev[0]?.t0, fim:P.ev.at(-1)?.t1};
+}
+// lacunas de posição: hoje (só Wi-Fi) × proposto (4G + satélite 15 min + memória)
+function gapStats(pts){
+  for(let i=pts.length-1,nw=null;i>=0;i--){ if(pts[i].wifi) nw=pts[i].t; pts[i].atual=nw; }
+  for(let i=pts.length-1,nc=null;i>=0;i--){ if(pts[i].cov) nc=pts[i].t; pts[i].nextCov=nc; }
+  let lastSat=-1; pts.forEach(q=>{ if(q.cov){q.prop=q.t;} else if(lastSat<0||q.t-lastSat>=0.25){q.prop=q.t;lastSat=q.t;} else q.prop=Math.min(q.nextCov??Infinity,q.atual??Infinity); });
+  const gap=key=>{ let mx=0; for(let now=pts[0].t; now<=pts.at(-1).t; now+=1/30){ let last=pts[0].t; for(const q of pts){ if(q.t>now) break; if(q[key]!=null&&q[key]<=now) last=Math.max(last,q.t); } mx=Math.max(mx,now-last); } return mx; };
+  return {atual:gap("atual"), prop:gap("prop"), semSinal:pts.filter(q=>!q.cov).length/pts.length};
+}
+
+/* ---------- km, terreno e custo recalculados a partir das rotas (mesma base em todas as abas) ---------- */
+(function(){
+  V.forEach(v=>{
+    let km=0; const kt={a:0,t:0,o:0}; let tal=0, uteis=0;
+    for(let d=0;d<NDIAS;d++){ const P=planDay(v,d); const st=dayStats(P); km+=st.km; kt.a+=st.kmT.a; kt.t+=st.kmT.t; kt.o+=st.kmT.o; if(isWeekday(d)){ uteis++; if(P.ev.some(e=>e.k==="field")) tal++; } }
+    const kmM=Math.max(1,km/3), f=kmM/v.km;
+    v.km=Math.round(kmM); v.asf=km?kt.a/km:1; v.terra=km?kt.t/km:0; v.off=km?kt.o/km:0; v.dias_talhao=tal/uteis;
+    v.comb=Math.round(v.comb*f); v.manut=Math.round(v.manut*f); v.pedagio=Math.round(v.pedagio*f);
+    v.total=v.fixo+v.comb+v.manut+v.pedagio+v.multas; v.fora=v.terra+v.off; v.ckm=v.total/v.km;
+    if(v.tipo==="Caminhonete" && v.rec!=="Desmobilizar"){ v.rec = (v.fora<0.15 && v.dias_talhao<0.2) ? "Trocar por carro" : "Manter"; if(v.rec==="Manter") v.eco=0; }
+    if(v.rec==="Trocar por carro"){ const car=1350+v.km/12.5*6.30+v.km/1000*55*(1+v.terra*1.2)+v.pedagio; v.eco=Math.max(0,Math.round(v.total-car)); v.motivo=`${pct(v.fora)} do km fora do asfalto; entrou em talhão em ${pct(v.dias_talhao)} dos dias úteis`; }
+    if(v.rec==="Desmobilizar"){ v.eco=Math.round(v.fixo+0.3*v.manut); v.motivo=`Usado em ${pct(v.dias_uso)} dos dias úteis; a unidade ${v.unidade} atende a demanda sem ele, usando o pool`; }
+    if(v.rec==="Manter" && v.tipo==="Caminhonete") v.motivo=`${pct(v.fora)} do km em terra ou talhão`;
+  });
+  const fim = v => v.rec==="Trocar por carro" ? "Carro" : v.tipo;
+  ["Caminhonete","Carro","Van"].forEach(t=>{ RES.porTipo[t].necessaria = V.filter(v=>v.rec!=="Desmobilizar" && fim(v)===t).length; });
+  RES.necessariaTotal = V.filter(v=>v.rec!=="Desmobilizar").length;
+})();
+/* ---------- visão geral ---------- */
+function goList(rec){ fRec.value=rec; fTipo.value=""; fUn.value=""; fFlag.value=""; fQ.value=""; fRec.dispatchEvent(new Event("change")); location.hash="veiculos"; }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-go]"); if(b) goList(b.dataset.go); });
+(function(){
+  const tot = V.reduce((s,v)=>s+v.total,0);
+  const eco = V.reduce((s,v)=>s+v.eco,0);
+  const pick = V.filter(v=>v.tipo==="Caminhonete");
+  const ckmP = pick.reduce((s,v)=>s+v.total,0)/pick.reduce((s,v)=>s+v.km,0);
+  const cars = V.filter(v=>v.tipo==="Carro");
+  const ckmC = cars.reduce((s,v)=>s+v.total,0)/cars.reduce((s,v)=>s+v.km,0);
+  const need = RES.necessariaTotal;
+  document.getElementById("kpis").innerHTML = `
+    <div class="card kpi"><span class="l">Custo total da frota</span><span class="v">${brlk(tot)}</span><span class="s">por mês · ${V.length} veículos</span></div>
+    <div class="card kpi"><span class="l">Frota necessária</span><span class="v">${need} <small style="font-size:15px;color:var(--muted)">de ${V.length}</small></span><span class="s">${V.length-need} veículos a mais que a demanda</span></div>
+    <div class="card kpi"><span class="l">Custo por km</span><span class="v num">R$ ${ckmP.toFixed(2).replace(".",",")}</span><span class="s">caminhonete · carro: R$ ${ckmC.toFixed(2).replace(".",",")}</span></div>
+    <div class="card kpi hl"><span class="l">Economia potencial</span><span class="v" style="color:var(--accent)">${brlk(eco)}/mês</span><span class="s">${brlk(eco*12)} por ano · ${pct(eco/tot)} do custo</span></div>`;
+
+  // plano de economia
+  const grp = r => V.filter(v=>v.rec===r);
+  const fl = k => V.filter(v=>v.flags.includes(k)).length;
+  const acoes = [
+    {rec:"Desmobilizar", t:`Desmobilizar ${grp("Desmobilizar").length} veículos ociosos`, d:"Devolver à locadora os menos usados de cada unidade; quem precisar reserva um veículo do pool.", eco:grp("Desmobilizar").reduce((s,v)=>s+v.eco,0), cls:"p-desm"},
+    {rec:"Trocar por carro", t:`Trocar ${grp("Trocar por carro").length} caminhonetes por carro`, d:"Caminhonetes que rodam quase só no asfalto e não entram em talhão.", eco:grp("Trocar por carro").reduce((s,v)=>s+v.eco,0), cls:"p-troca"},
+    {rec:"Revisar alocação", t:`Revisar ${grp("Revisar alocação").length} carros em estrada de terra`, d:"Mais manutenção e risco de acidente; avaliar troca com caminhonetes ociosas.", eco:0, cls:"p-rev"},
+  ];
+  const mx = Math.max(...acoes.map(a=>a.eco));
+  document.getElementById("planoTot").textContent = `total ${brl(eco)}/mês · ${brl(eco*12)}/ano`;
+  document.getElementById("plano").innerHTML = acoes.map(a=>`
+    <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(100px,1fr) 170px auto;gap:14px;align-items:center;padding:10px 0;border-top:1px solid var(--line)" class="acao">
+      <div><b>${a.t}</b><div class="note">${a.d}</div></div>
+      <div class="bar" style="height:12px">${a.eco?`<i style="width:${a.eco/mx*100}%;background:var(${REC_COLOR[a.rec]})"></i>`:""}</div>
+      <b class="num" style="text-align:right;${a.eco?"color:var(--accent)":"color:var(--muted);font-weight:500"}">${a.eco?brl(a.eco)+"<span class='note' style='font-weight:400'>/mês</span>":"sem economia direta"}</b>
+      <button type="button" data-go="${a.rec}">Ver lista</button>
+    </div>`).join("");
+
+  // uso diário
+  const W=600,H=230,m={l:40,r:14,t:16,b:28}, S=RES.serieTotal, n=S.length;
+  const ymax=Math.ceil(V.length/50)*50;
+  const x=i=>m.l+i/(n-1)*(W-m.l-m.r), y=v=>H-m.b-v/ymax*(H-m.t-m.b);
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:420px" role="img" aria-label="Veículos em uso por dia comparados à frota atual e necessária">`;
+  for(let v=0;v<=ymax;v+=100) s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${m.l-6}" y="${y(v)+4}" text-anchor="end" font-size="11">${v}</text>`;
+  [0,30,60,89].forEach(i=>s+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="11">${i===89?"hoje":`dia ${i+1}`}</text>`);
+  s+=`<path d="M${x(0)},${y(0)} ${S.map((v,i)=>`L${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ")} L${x(n-1)},${y(0)}Z" fill="var(--accent)" fill-opacity=".14"/>`;
+  s+=`<polyline points="${S.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="1.6"/>`;
+  s+=`<rect x="${m.l}" y="${y(V.length)}" width="${W-m.l-m.r}" height="${y(need)-y(V.length)}" fill="var(--crit)" fill-opacity=".09"/>`;
+  s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(V.length)}" y2="${y(V.length)}" stroke="var(--crit)" stroke-width="2"/><text x="${W-m.r}" y="${y(V.length)-6}" text-anchor="end" font-size="12" style="fill:var(--crit);font-weight:600">frota atual · ${V.length}</text>`;
+  s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(need)}" y2="${y(need)}" stroke="var(--ink)" stroke-width="2" stroke-dasharray="6 4"/><text x="${W-m.r}" y="${y(need)+15}" text-anchor="end" font-size="12" style="fill:var(--ink);font-weight:600">necessária · ${need}</text>`;
+  s+=`<text x="${m.l+8}" y="${(y(V.length)+y(need))/2+4}" font-size="11" style="fill:var(--crit)">${V.length-need} veículos ociosos</text>`;
+  s+=`</svg>`;
+  document.getElementById("useChart").innerHTML=s;
+
+  const tmax=Math.max(...Object.values(RES.porTipo).map(t=>Math.max(t.atual,t.aposTroca)));
+  document.getElementById("typeBars").innerHTML = Object.entries(RES.porTipo).map(([t,o])=>`
+    <div style="display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:center;margin:8px 0">
+      <span style="font-size:13px">${t}</span>
+      <div style="display:grid;gap:3px">
+        <div style="display:flex;gap:8px;align-items:center"><div class="meter" style="flex:1;height:8px"><i style="width:${o.atual/tmax*100}%;background:var(--crit);opacity:.75"></i></div><span class="num note" style="width:120px">${o.atual} hoje</span></div>
+        <div style="display:flex;gap:8px;align-items:center"><div class="meter" style="flex:1;height:8px"><i style="width:${o.necessaria/tmax*100}%;background:var(--ink)"></i></div><span class="num note" style="width:120px">${o.necessaria} necessárias</span></div>
+      </div>
+    </div>`).join("");
+
+  // top desmobilizar
+  document.getElementById("desmTop").innerHTML = grp("Desmobilizar").sort((a,b)=>a.dias_uso-b.dias_uso).slice(0,14).map(v=>`
+    <tr data-id="${v.id}"><td><b class="mono">${v.id}</b> <span class="note">${v.tipo}</span></td><td>${v.unidade}</td><td class="r num">${pct(v.dias_uso)}</td><td class="r num">${brl(v.eco)}</td></tr>`).join("");
+  document.getElementById("desmTop").addEventListener("click",e=>{ const tr=e.target.closest("tr"); if(tr) goVehicle(tr.dataset.id); });
+
+  // scatter
+  const SW=560,SH=330,sm={l:46,r:14,t:12,b:40};
+  const sx = f => sm.l + f/0.85*(SW-sm.l-sm.r), sy = d => SH-sm.b - d*(SH-sm.t-sm.b);
+  let sc = `<svg viewBox="0 0 ${SW} ${SH}" width="100%" style="min-width:420px" role="img" aria-label="Dispersão das caminhonetes por percentual fora do asfalto e dias em talhão">`;
+  for(let i=0;i<=8;i+=2){ const f=i/10; sc+=`<line x1="${sx(f)}" x2="${sx(f)}" y1="${sm.t}" y2="${SH-sm.b}" stroke="var(--line)"/><text x="${sx(f)}" y="${SH-sm.b+16}" text-anchor="middle" font-size="11">${i*10}%</text>`; }
+  for(let i=0;i<=4;i++){ const d=i/4; sc+=`<line x1="${sm.l}" x2="${SW-sm.r}" y1="${sy(d)}" y2="${sy(d)}" stroke="var(--line)"/><text x="${sm.l-6}" y="${sy(d)+4}" text-anchor="end" font-size="11">${d*100}%</text>`; }
+  sc+=`<rect x="${sx(0)}" y="${sy(0.2)}" width="${sx(0.15)-sx(0)}" height="${sy(0)-sy(0.2)}" fill="var(--good)" opacity=".10"/>`;
+  sc+=`<text x="${sx(0)+6}" y="${sy(0.2)-6}" font-size="11" style="fill:var(--good);font-weight:600">zona de troca</text>`;
+  sc+=`<text x="${(SW+sm.l)/2}" y="${SH-6}" text-anchor="middle" font-size="12">% do km fora do asfalto</text>`;
+  sc+=`<text transform="translate(12 ${(SH-sm.b+sm.t)/2}) rotate(-90)" text-anchor="middle" font-size="12">% dos dias em talhão</text>`;
+  pick.forEach(v=>{ const j=hashStr(v.id); const jx=((j%97)/97-0.5)*0.025, jy=(((j>>8)%89)/89-0.5)*0.03; sc+=`<circle cx="${sx(Math.min(0.85,Math.max(0,v.fora+jx))).toFixed(1)}" cy="${sy(Math.min(1,Math.max(0,v.dias_talhao+jy))).toFixed(1)}" r="4" fill="var(${REC_COLOR[v.rec]})" fill-opacity=".8" stroke="var(--surface)" stroke-width=".8"><title>${v.id} · ${pct(v.fora)} fora do asfalto · ${pct(v.dias_talhao)} dias em talhão · ${v.rec}</title></circle>`; });
+  sc+=`</svg>`;
+  document.getElementById("scatter").innerHTML = sc;
+  document.getElementById("scLegend").innerHTML = ["Trocar por carro","Desmobilizar","Manter"].map(r=>`<span><i class="sw" style="background:var(${REC_COLOR[r]})"></i>${r}</span>`).join("");
+
+  // por unidade
+  const byU = UNS.map(u=>({u, ...RES.porUnidade[u], eco:V.filter(v=>v.unidade===u).reduce((s,v)=>s+v.eco,0)}));
+  const umax = Math.max(...byU.map(b=>b.atual));
+  document.getElementById("bars").innerHTML = byU.map(b=>`
+    <div style="display:grid;grid-template-columns:76px 1fr 96px;gap:10px;align-items:center;margin:7px 0">
+      <span style="font-size:13px">${b.u}</span>
+      <div class="bar" style="height:14px;position:relative" title="${b.necessaria} necessários de ${b.atual}"><i style="width:${b.necessaria/umax*100}%;background:var(--ink);opacity:.8"></i><i style="width:${(b.atual-b.necessaria)/umax*100}%;background:var(--crit);opacity:.55"></i></div>
+      <span class="num" style="text-align:right;font-size:13px">${brlk(b.eco)}</span>
+    </div>`).join("") + `<div class="legend"><span><i class="sw" style="background:var(--ink);opacity:.8"></i>Necessários</span><span><i class="sw" style="background:var(--crit);opacity:.55"></i>Excedentes</span><span>valor à direita: economia/mês</span></div>`;
+
+  const items = [["Ocorrências de conduta (90 dias)", OCC.length],["Consumo acima do esperado", fl("Consumo acima do esperado")],["Uso em fim de semana", fl("Uso em fim de semana")],["Caminhonete indo muito à cidade", fl("Muitas idas a restaurante/cidade")]];
+  document.getElementById("alerts").innerHTML = items.map(([f,n],i)=>`<div ${i===0?'role="link" tabindex="0" onclick="location.hash=\'ocorrencias\'" title="Abrir ocorrências"':""} style="${i===0?"cursor:pointer;":""}display:flex;justify-content:space-between;gap:8px;border-left:3px solid var(--crit);padding:4px 10px;background:color-mix(in srgb,var(--crit) 6%,transparent);border-radius:4px"><span style="font-size:13px">${f}</span><b class="num">${n}</b></div>`).join("");
+})();
+
+/* ---------- tabela ---------- */
+(function(){
+  const fUn = document.getElementById("fUn");
+  UNS.forEach(u=>fUn.insertAdjacentHTML("beforeend",`<option>${u}</option>`));
+  let sortK="eco", dir=-1, sel=null;
+  const tb = document.querySelector("#tbl tbody");
+  function render(){
+    const t=fTipo.value, r=fRec.value, u=fUn.value, f=fFlag.value, q=fQ.value.trim().toUpperCase();
+    let rows = V.filter(v=>(!t||v.tipo===t)&&(!r||v.rec===r)&&(!u||v.unidade===u)&&(!f||v.flags.length||v.occ||v.rec==="Revisar alocação")&&(!q||v.id.includes(q)||v.placa.includes(q)));
+    rows.sort((a,b)=> (a[sortK]>b[sortK]?1:a[sortK]<b[sortK]?-1:0)*dir);
+    document.getElementById("count").textContent = `${rows.length} veículos · economia ${brl(rows.reduce((s,v)=>s+v.eco,0))}/mês`;
+    tb.innerHTML = rows.map(v=>`<tr data-id="${v.id}" tabindex="0" class="${v.id===sel?"sel":""}">
+      <td><b class="mono">${v.id}</b> <span class="note mono">${v.placa}</span>${v.flags.length?` <span class="flag" title="${v.flags.join(", ")}">${v.flags.length} alerta${v.flags.length>1?"s":""}</span>`:""}</td>
+      <td>${v.tipo}</td><td>${v.unidade}</td><td class="r num">${v.km.toLocaleString("pt-BR")}</td>
+      <td><div class="bar" title="Asfalto ${pct(v.asf)} · terra ${pct(v.terra)} · talhão ${pct(v.off)}"><i style="width:${v.asf*100}%;background:var(--asf)"></i><i style="width:${v.terra*100}%;background:var(--terra)"></i><i style="width:${v.off*100}%;background:var(--off)"></i></div></td>
+      <td class="r num">${pct(v.dias_talhao)}</td><td class="r num">${pct(v.dias_uso)}</td><td class="r num">${brl(v.total)}</td><td class="r num">${v.ckm.toFixed(2).replace(".",",")}</td>
+      <td><span class="pill ${PILL[v.rec]}">${v.rec}</span></td><td class="r num">${v.eco?brl(v.eco):"—"}</td><td class="r num">${v.occ?`<span class="occb">${v.occ}</span>`:"—"}</td></tr>`).join("");
+    document.querySelectorAll("#tbl th").forEach(th=>{ if(th.dataset.k===sortK) th.setAttribute("aria-sort", dir>0?"ascending":"descending"); else th.setAttribute("aria-sort","none"); });
+
+  }
+  function show(id){
+    sel=id; const v=V.find(x=>x.id===id);
+    document.querySelectorAll("#tbl tbody tr").forEach(tr=>tr.classList.toggle("sel",tr.dataset.id===id));
+    const parts=[["Locação",v.fixo],["Combustível",v.comb],["Manutenção",v.manut],["Pedágio",v.pedagio],["Multas",v.multas]];
+    document.getElementById("detail").innerHTML = `
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><h2 class="mono">${v.id}</h2><span class="pill ${PILL[v.rec]}">${v.rec}</span></div>
+      <p class="note" style="margin:0">${v.tipo} · ${v.unidade} · placa ${v.placa}</p>
+      ${v.occ?`<p style="margin:0;color:var(--crit);font-weight:600">${v.occ} ocorrências de conduta em 90 dias. Ver em "Rotas e histórico".</p>`:""}
+      ${v.motivo?`<p style="margin:0">${v.motivo.charAt(0).toUpperCase()+v.motivo.slice(1)}.</p>`:""}
+      ${v.eco?`<p style="margin:0;color:var(--accent);font-weight:600">Economia estimada: ${brl(v.eco)}/mês · ${brl(v.eco*12)}/ano</p>`:""}
+      <button type="button" class="on" data-rotas="${v.id}">Ver rotas e histórico de 90 dias${v.occ?` · ${v.occ} ocorrências`:""}</button>
+      <h3>Custo mensal: ${brl(v.total)}</h3>
+      <div class="bar" style="height:12px">${parts.map((p,i)=>`<i style="width:${p[1]/v.total*100}%;background:${["var(--accent)","var(--terra)","var(--info)","var(--asf)","var(--crit)"][i]}" title="${p[0]}"></i>`).join("")}</div>
+      <dl>${parts.map((p,i)=>`<dt><i class="sw" style="background:${["var(--accent)","var(--terra)","var(--info)","var(--asf)","var(--crit)"][i]};margin-right:6px;vertical-align:-1px"></i>${p[0]}</dt><dd>${brl(p[1])}</dd>`).join("")}</dl>
+      <h3>Uso no período</h3>
+      <dl>
+        <dt>Km por mês</dt><dd>${v.km.toLocaleString("pt-BR")} km</dd>
+        <dt>Terreno</dt><dd>${pct(v.asf)} asfalto · ${pct(v.terra)} terra · ${pct(v.off)} talhão</dd>
+        <dt>Dias de uso</dt><dd>${pct(v.dias_uso)} dos dias úteis</dd>
+        <dt>Dias em talhão</dt><dd>${pct(v.dias_talhao)}</dd>
+        <dt>Restaurante/cidade</dt><dd>${v.rest_sem.toLocaleString("pt-BR")} visitas por semana</dd>
+        <dt>Consumo</dt><dd>${v.kml_real.toLocaleString("pt-BR")} km/l (referência ${v.kml_ref.toLocaleString("pt-BR")})</dd>
+        <dt>Tempo com 4G</dt><dd>${pct(v.cob4g)}</dd>
+      </dl>
+      ${v.flags.length?`<div>${v.flags.map(f=>`<span class="flag">${f}</span>`).join("")}</div>`:""}`;
+  }
+  ["fTipo","fRec","fUn","fFlag"].forEach(id=>document.getElementById(id).addEventListener("change",()=>{sel=null;render();}));
+  fQ.addEventListener("input",()=>{sel=null;render();});
+  document.querySelectorAll("#tbl th").forEach(th=>th.addEventListener("click",()=>{ const k=th.dataset.k; if(k===sortK) dir*=-1; else {sortK=k; dir=["id","tipo","unidade","rec"].includes(k)?1:-1;} render(); }));
+  tb.addEventListener("click",e=>{const tr=e.target.closest("tr"); if(tr) goVehicle(tr.dataset.id); });
+  tb.addEventListener("keydown",e=>{ if(e.key==="Enter"){const tr=e.target.closest("tr"); if(tr) goVehicle(tr.dataset.id);} });
+  render();
+})();
+
+/* ---------- ocorrências agrupadas + página do veículo ---------- */
+const RT = { v:null, d:null, mode:"dia", zoom:"rota", tSel:null, occFilter:"", soOcc:false, dv:"cal", calM:null };
+const TER = {a:"--asf",t:"--terra",o:"--off"};
+const vById = id => V.find(v=>v.id===id);
+const TIPO_INFO = {
+  "Parada em local proibido":"O veículo parou num local onde não deveria estar (bar, propriedade de terceiros, área de preservação, lazer).",
+  "Uso fora do horário":"O veículo foi ligado e rodou entre 22h e 5h.",
+  "Velocidade em estrada de terra":"Passou de 60 km/h em estrada de terra.",
+};
+const WDN = ["domingo","segunda","terça","quarta","quinta","sexta","sábado"];
+function goVehicle(id, d, t){ RT.pending={d,t}; location.hash="veiculo-"+id; if(location.hash==="#veiculo-"+id) openVehicle(id); }
+
+// ----- ocorrências agrupadas por veículo -----
+function occGroups(){
+  const g={};
+  OCC.forEach(o=>{ const k=o.v+"|"+o.tipo+"|"+o.key; (g[k]=g[k]||{v:o.v,tipo:o.tipo,key:o.key,sev:o.sev,items:[]}).items.push(o); });
+  return Object.values(g).map(x=>{ x.items.sort((a,b)=>b.d-a.d||b.t-a.t); x.last=x.items[0];
+    x.tm=x.items.reduce((s,o)=>s+o.t,0)/x.items.length; x.dm=x.items.reduce((s,o)=>s+o.dur,0)/x.items.length;
+    const wd={}; x.items.forEach(o=>{ const w=dateOf(o.d).getDay(); wd[w]=(wd[w]||0)+1; });
+    const top=Object.entries(wd).sort((a,b)=>b[1]-a[1]); x.dias = top.length<=2 ? top.map(([w])=>WDN[w]).join(" e ") : (top.every(([w])=>w>0&&w<6)?"dias úteis":"vários dias");
+    return x; }).sort((a,b)=>(a.sev===b.sev?0:a.sev==="crit"?-1:1)||b.items.length-a.items.length);
+}
+const GROUPS = occGroups();
+function renderOcc(){
+  const tipos=Object.keys(TIPO_INFO);
+  const q=(ocQ.value||"").trim().toUpperCase();
+  occChips.innerHTML=`<button type="button" class="chip ${RT.occFilter===""?"on":""}" data-t="">Todas <b>${GROUPS.length}</b></button>`+
+    tipos.map(t=>{ const gs=GROUPS.filter(x=>x.tipo===t); return `<button type="button" class="chip ${RT.occFilter===t?"on":""}" data-t="${t}"><i class="sev ${t.startsWith("Velocidade")?"warn":"crit"}"></i>${t} <b>${gs.length}</b></button>`; }).join("");
+  occInfo.textContent = RT.occFilter ? TIPO_INFO[RT.occFilter] : "Cada linha é um veículo com um comportamento que se repetiu. Clique para abrir o histórico e o trajeto do veículo.";
+  const rows=GROUPS.filter(x=>(!RT.occFilter||x.tipo===RT.occFilter)&&(!q||x.v.includes(q)||vById(x.v).placa.includes(q)));
+  occGroupsEl.innerHTML = rows.map(x=>{ const v=vById(x.v); const n=x.items.length; const L=x.last;
+    return `<button type="button" class="og ${x.sev}" data-v="${x.v}" data-d="${L.d}" data-t="${L.t}">
+      <span class="og-v"><b class="mono">${v.id}</b> <span class="mono">${v.placa}</span><br><span class="note">${v.tipo} · ${v.unidade}</span></span>
+      <span class="og-o"><span class="pill ${x.sev==="crit"?"p-crit":"p-rev"}">${x.tipo}</span><br>
+        <span>${x.tipo==="Parada em local proibido"?`Parou em <b>${PLACES[x.key].n}</b>`:L.local.charAt(0).toUpperCase()+L.local.slice(1)}</span>
+        <br><span class="note"><b style="color:var(--ink)">${n===1?"1 vez":`${n} vezes`} em 90 dias</b>${n>1?` · por volta das ${hhmm(x.tm)} · ${x.dias==="vários dias"?"em dias variados":x.dias==="dias úteis"?"em dias úteis":"aos "+x.dias.replace("sábado","sábados").replace("domingo","domingos")}`:""}${x.tipo!=="Velocidade em estrada de terra"?` · ${durTxt(x.dm)} em média`:""}</span></span>
+      <span class="og-l"><span class="note">Última vez</span><br><b>${fmtDia(L.d)} ${hhmm(L.t)}</b><br><span class="lnk">Ver trajeto →</span></span>
+    </button>`; }).join("") || `<p class="note">Nenhuma ocorrência encontrada.</p>`;
+}
+
+// ----- página do veículo -----
+function openVehicle(id){
+  const v=vById(id); if(!v) return;
+  if(!RT.v || RT.v.id!==id){ RT.v=v; RT.planos=[...Array(NDIAS).keys()].map(i=>planDay(v,i)); RT.soOcc=false; RT.mode="dia"; RT.d=null; }
+  const pend=RT.pending||{}; RT.pending=null;
+  if(pend.d!=null){ RT.d=pend.d; RT.mode="dia"; RT.tSel=pend.t!=null?pend.t+0.01:null; }
+  if(RT.d==null) RT.d=[...RT.planos.keys()].reverse().find(i=>RT.planos[i].ev.length) ?? NDIAS-1;
+  renderVehiclePage(); scrollTo(0,0);
+}
+function porqueDesm(v){
+  const fim = x => x.rec==="Trocar por carro" ? "Carro" : (x.tipo==="Caminhonete"&&x.rec==="Desmobilizar"&&x.tipo_final==="Carro" ? "Carro" : x.tipo);
+  const grupo=V.filter(x=>x.unidade===v.unidade && (x.tipo_final||x.tipo)===(v.tipo_final||v.tipo));
+  const daily=[...Array(NDIAS).keys()].map(d=>grupo.filter(x=>x.uso[d]==="1").length).sort((a,b)=>a-b);
+  const p95=daily[Math.min(daily.length-1,Math.ceil(0.95*daily.length)-1)], pico=daily.at(-1), media=daily.reduce((s,x)=>s+x,0)/daily.length;
+  const need=Math.min(grupo.length,Math.ceil(p95*1.08));
+  const rank=[...grupo].sort((a,b)=>a.dias_uso-b.dias_uso).findIndex(x=>x.id===v.id)+1;
+  const tipoTxt=((v.tipo_final||v.tipo)==="Carro"?"carros":(v.tipo_final||v.tipo).toLowerCase()+"s");
+  return `<div class="why"><h3>Por que desmobilizar este veículo</h3><ol class="clean" style="padding-left:20px">
+    ${v.tipo!==(v.tipo_final||v.tipo)?`<li>Esta caminhonete roda praticamente só no asfalto, então já entraria na troca por carro. Por isso ela é contada junto com os carros.</li>`:""}
+    <li>A unidade <b>${v.unidade}</b> tem <b>${grupo.length} ${tipoTxt}</b>${v.tipo!==(v.tipo_final||v.tipo)?" (já contando as caminhonetes que viram carro)":""}.</li>
+    <li>Nos últimos 90 dias, em média <b>${Math.round(media)}</b> estiveram em uso ao mesmo tempo. Em 95% dos dias foram no máximo <b>${p95}</b> (o pico foi ${pico}). Fins de semana entram na conta.</li>
+    <li>Com 8% de reserva, a unidade precisa de <b>${need}</b>. Sobram <b>${grupo.length-need}</b>.</li>
+    <li>Saem os menos usados. Este é o <b>${rank}º menos usado</b> do grupo: rodou em <b>${pct(v.dias_uso)}</b> dos dias úteis.</li>
+  </ol><p class="note" style="margin:0">Economia considerada: locação (${brl(v.fixo)}) mais 30% da manutenção. O combustível não entra, porque esses km passam para outro veículo do pool.</p></div>`;
+}
+function renderVehiclePage(){
+  const v=RT.v; const P=RT.planos;
+  const occV=P.flatMap(p=>occOf(v,p));
+  const kmTot=P.reduce((s,p)=>s+dayStats(p).km,0);
+  const parts=[["Locação",v.fixo],["Combustível",v.comb],["Manutenção",v.manut],["Pedágio",v.pedagio],["Multas",v.multas]];
+  const cores=["var(--accent)","var(--terra)","var(--info)","var(--asf)","var(--crit)"];
+  const resumoOcc={}; occV.forEach(o=>{ const k=o.tipo+" · "+(o.tipo==="Parada em local proibido"?PLACES[o.key].n:o.tipo==="Uso fora do horário"?"madrugada":"estrada de terra"); resumoOcc[k]=(resumoOcc[k]||0)+1; });
+  vpage.innerHTML=`
+    <a href="#veiculos" class="back">← Todos os veículos</a>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start">
+        <div><h1 style="font-size:24px"><span class="mono">${v.id}</span> · <span class="mono">${v.placa}</span></h1><span class="note">${v.tipo} · ${v.unidade}</span></div>
+        <span class="pill ${PILL[v.rec]}" style="font-size:13px">${v.rec}</span>
+      </div>
+      ${v.motivo?`<p style="margin:0">${v.motivo.charAt(0).toUpperCase()+v.motivo.slice(1)}.${v.eco?` <b style="color:var(--accent)">Economia de ${brl(v.eco)}/mês.</b>`:""}</p>`:""}
+      <div class="grid k4 mini">
+        <div><span class="note">Km por mês</span><b class="num">${v.km.toLocaleString("pt-BR")}</b></div>
+        <div><span class="note">Dias de uso</span><b class="num">${pct(v.dias_uso)} dos dias úteis</b></div>
+        <div><span class="note">Custo por mês</span><b class="num">${brl(v.total)}</b></div>
+        <div><span class="note">Ocorrências (90 dias)</span><b class="num" style="${occV.length?"color:var(--crit)":""}">${occV.length||"nenhuma"}</b></div>
+      </div>
+      ${v.rec==="Desmobilizar"?porqueDesm(v):""}
+      ${occV.length?`<div class="occsum">${Object.entries(resumoOcc).map(([k,n])=>`<span class="pill p-crit">${k}: ${n}×</span>`).join("")}</div>`:""}
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline"><h2>Histórico de trajetos · últimos 90 dias</h2><span class="note num">${P.filter(p=>p.ev.length).length} dias com uso · ${Math.round(kmTot).toLocaleString("pt-BR")} km</span></div>
+      <p class="note" style="margin:0">Escolha um dia no calendário para ver por onde o veículo passou, onde parou e por quanto tempo.</p>
+      <div class="hist">
+        <div class="daycol">
+          <div class="seg" role="group" aria-label="Forma de ver o histórico"><button type="button" data-dv="cal" class="${RT.dv==="cal"?"on":""}">Calendário</button><button type="button" data-dv="lista" class="${RT.dv==="lista"?"on":""}">Lista</button></div>
+          <label class="chk note" id="soOccL" ${RT.dv==="cal"?"hidden":""}><input type="checkbox" id="soOcc" ${RT.soOcc?"checked":""}> Só dias com ocorrência</label>
+          <div class="daylist" id="daylist"></div>
+        </div>
+        <div class="mapcol">
+          <div class="btns"><button type="button" data-mode="dia" class="${RT.mode==="dia"?"on":""}">Trajeto do dia</button><button type="button" data-mode="all" class="${RT.mode==="all"?"on":""}">Locais mais frequentes</button>
+            <span style="flex:1"></span><button type="button" data-zoom="${RT.zoom==="rota"?"regiao":"rota"}">${RT.zoom==="rota"?"Ver região toda":"Aproximar"}</button></div>
+          <div id="rtMap"></div>
+          ${RT.mode==="dia"?`<div class="slider"><label for="rtT" class="note">Horário</label><input type="range" id="rtT" min="0" max="1000" value="1000"><span class="mono num" id="rtTl"></span></div>`:""}
+          <div class="legend"><span><i class="ln" style="background:var(--asf)"></i>Asfalto</span><span><i class="ln" style="background:var(--terra)"></i>Terra</span><span><i class="ln" style="background:var(--off)"></i>Talhão</span><span><i class="sw" style="background:var(--ink);border-radius:50%"></i>Parada</span><span><i class="sw" style="background:var(--crit);border-radius:50%"></i>Parada proibida</span></div>
+        </div>
+        <div class="sidecol" id="rtSide"></div>
+      </div>
+    </div>
+
+    <div class="card detail">
+      <h2>Custo e uso</h2>
+      <h3>Custo mensal: ${brl(v.total)}</h3>
+      <div class="bar" style="height:12px">${parts.map((p,i)=>`<i style="width:${p[1]/v.total*100}%;background:${cores[i]}" title="${p[0]}"></i>`).join("")}</div>
+      <div class="grid c2" style="gap:24px">
+        <dl>${parts.map((p,i)=>`<dt><i class="sw" style="background:${cores[i]};margin-right:6px;vertical-align:-1px"></i>${p[0]}</dt><dd>${brl(p[1])}</dd>`).join("")}</dl>
+        <dl>
+          <dt>Terreno</dt><dd>${pct(v.asf)} asfalto · ${pct(v.terra)} terra · ${pct(v.off)} talhão</dd>
+          <dt>Dias em talhão</dt><dd>${pct(v.dias_talhao)} dos dias úteis</dd>
+          <dt>Consumo</dt><dd>${v.kml_real.toLocaleString("pt-BR")} km/l (referência ${v.kml_ref.toLocaleString("pt-BR")})</dd>
+          <dt>Tempo com 4G</dt><dd>${pct(v.cob4g)}</dd>
+          <dt>Custo por km</dt><dd>R$ ${v.ckm.toFixed(2).replace(".",",")}</dd>
+        </dl>
+      </div>
+      ${v.flags.length?`<div>${v.flags.map(f=>`<span class="flag">${f}</span>`).join("")}</div>`:""}
+    </div>`;
+  renderDayList(); drawRoute();
+}
+const MESES=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+function renderCal(){
+  const v=RT.v; const sel=dateOf(RT.d);
+  const meses=[]; for(let d=0;d<NDIAS;d++){ const t=dateOf(d); const k=t.getFullYear()*12+t.getMonth(); if(!meses.includes(k)) meses.push(k); }
+  if(RT.calM==null || !meses.includes(RT.calM)) RT.calM = sel.getFullYear()*12+sel.getMonth();
+  const y=Math.floor(RT.calM/12), m=RT.calM%12; const first=new Date(y,m,1), ndays=new Date(y,m+1,0).getDate();
+  const idx = dt => Math.round((dt - D0)/864e5);
+  const kms=RT.planos.map(p=>dayStats(p).km), mx=Math.max(...kms,1);
+  let usados=0, occs=0;
+  let h=`<div class="calhead"><button type="button" class="calnav" data-cal="-1" ${meses.indexOf(RT.calM)<=0?"disabled":""} aria-label="Mês anterior">‹</button><b>${MESES[m]} ${y}</b><button type="button" class="calnav" data-cal="1" ${meses.indexOf(RT.calM)>=meses.length-1?"disabled":""} aria-label="Próximo mês">›</button></div>
+    <div class="mcal">${["S","T","Q","Q","S","S","D"].map(l=>`<span class="mw">${l}</span>`).join("")}`;
+  const off=(first.getDay()+6)%7; for(let i=0;i<off;i++) h+=`<span></span>`;
+  for(let dn=1; dn<=ndays; dn++){
+    const d=idx(new Date(y,m,dn));
+    if(d<0||d>=NDIAS){ h+=`<span class="mc out">${dn}</span>`; continue; }
+    const p=RT.planos[d], km=kms[d], o=occOf(v,p); if(p.ev.length) usados++; occs+=o.length;
+    const bg = km ? `color-mix(in srgb,var(--accent) ${Math.round(22+60*km/mx)}%,var(--surface))` : "var(--bg)";
+    h+=`<button type="button" class="mc ${d===RT.d&&RT.mode==="dia"?"on":""} ${km?"used":""}" data-d="${d}" style="background:${bg}" title="${fmtDia(d)} · ${km?Math.round(km)+" km":"parado"}${o.length?" · "+o.length+" ocorrência":""}" aria-label="${fmtDia(d)}${o.length?", com ocorrência":""}">${dn}${o.length?`<i></i>`:""}</button>`;
+  }
+  h+=`</div><div class="legend calleg"><span><i class="sw" style="background:var(--bg);border:1px solid var(--line)"></i>parado</span><span><i class="sw" style="background:var(--accent)"></i>rodou (mais escuro = mais km)</span><span><i class="sw" style="background:var(--crit);border-radius:50%"></i>ocorrência</span></div>
+    <p class="note num" style="margin:0">${MESES[m]}: ${usados} dias com uso${occs?` · <b style="color:var(--crit)">${occs} ocorrência${occs>1?"s":""}</b>`:""}</p>`;
+  daylist.innerHTML=h;
+}
+function renderDayList(){
+  if(RT.dv==="cal") return renderCal();
+  const v=RT.v;
+  const rows=[...RT.planos.keys()].reverse().map(d=>{ const p=RT.planos[d]; const o=occOf(v,p); const st=dayStats(p); return {d,p,o,st}; }).filter(r=>!RT.soOcc||r.o.length);
+  daylist.innerHTML = rows.map(({d,p,o,st})=> p.ev.length
+    ? `<button type="button" class="dayrow ${d===RT.d&&RT.mode==="dia"?"on":""} ${o.length?"bad":""}" data-d="${d}"><span><b>${fmtDia(d)}</b>${o.length?` <span class="occb">${o.length}</span>`:""}<br><span class="note num">${hhmm(st.ini)}–${hhmm(st.fim)} · ${Math.round(st.km)} km · ${st.stops} paradas</span></span></button>`
+    : `<button type="button" class="dayrow off ${d===RT.d&&RT.mode==="dia"?"on":""}" data-d="${d}"><span><b>${fmtDia(d)}</b><br><span class="note">parado</span></span></button>`).join("") || `<p class="note">Nenhum dia com ocorrência.</p>`;
+  const on=daylist.querySelector(".on"); if(on) on.scrollIntoView({block:"nearest"});
+}
+
+function drawRoute(){
+  const v=RT.v, all=RT.mode==="all";
+  const days = all ? RT.planos.filter(p=>p.used) : [RT.planos[RT.d]];
+  const ptsD = days.map(p=>pointsOf(p));
+  const P0 = all?null:RT.planos[RT.d], pts=all?null:ptsD[0];
+  // horário selecionado
+  let now=Infinity;
+  if(!all && pts.length){ const sl=document.getElementById("rtT"); const t0=pts[0].t, t1=pts.at(-1).t; if(RT.tSel!=null){ sl.value=Math.round((RT.tSel-t0)/(t1-t0)*1000); RT.tSel=null; } now=t0+(t1-t0)*sl.value/1000; rtTl.textContent=hhmm(now); }
+  // enquadramento
+  let vb=[0,0,GEO.W,GEO.H];
+  const allPts=ptsD.flat();
+  if(RT.zoom==="rota" && allPts.length){ const xs=allPts.map(q=>q.p[0]), ys=allPts.map(q=>q.p[1]); let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys); let w=Math.max(x1-x0,90),h=Math.max(y1-y0,90); const s=Math.max(w,h*1.0)*1.18; const cx=(x0+x1)/2, cy=(y0+y1)/2; vb=[cx-s/2,cy-s/2,s,s]; }
+  const k=vb[2]/1000; const fs=n=>(n*k*1.9).toFixed(2);
+  let s=`<svg viewBox="${vb.map(n=>n.toFixed(1)).join(" ")}" width="100%" style="border-radius:8px;display:block;max-height:640px" role="img" aria-label="Rotas do veículo ${v.id}">`;
+  s+=`<rect x="${vb[0]}" y="${vb[1]}" width="${vb[2]}" height="${vb[3]}" fill="color-mix(in srgb,var(--accent) 4%,var(--surface))"/>`;
+  const NS='vector-effect="non-scaling-stroke"';
+  GEO.mun.forEach(d=>s+=`<path d="${d}" fill="none" stroke="var(--line)" stroke-width="1.2" ${NS}/>`);
+  TALHOES.forEach(t=>s+=`<polygon points="${t.quad.map(PT).map(p=>p.map(n=>n.toFixed(1)).join(",")).join(" ")}" fill="var(--accent)" fill-opacity=".14" stroke="var(--accent)" stroke-opacity=".4" ${NS}/>`);
+  s+=`<path d="${GEO.sucuriu}" fill="none" stroke="var(--info)" stroke-opacity=".55" stroke-width="2.5" ${NS}/>`;
+  GEO.roads.forEach(d=>s+=`<path d="${d}" fill="none" stroke="var(--muted)" stroke-opacity=".35" stroke-width="3" ${NS}/>`);
+  EDGES.forEach(([a,b,t])=>{ const [x1,y1]=PT(N[a]),[x2,y2]=PT(N[b]); s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${t==="a"?"var(--muted)":"var(--terra)"}" stroke-opacity="${t==="a"?.4:.35}" stroke-width="${t==="a"?3:2}" ${t==="t"?'stroke-dasharray="5 4"':""} ${NS}/>`; });
+  Object.entries(PLACES).filter(([,p])=>p.k==="proibido").forEach(([key])=>{ const [x,y]=PT(N[key]); s+=`<circle cx="${x}" cy="${y}" r="${0.9/KM_U}" fill="var(--crit)" fill-opacity=".18" stroke="var(--crit)" stroke-opacity=".7" stroke-dasharray="4 3" ${NS}/>`; });
+  // trajetos
+  if(all){
+    ptsD.forEach(pp=>{ for(let i=0;i<pp.length-1;i++){ if(pp[i].stop&&pp[i+1].stop) continue; s+=`<line x1="${pp[i].p[0].toFixed(1)}" y1="${pp[i].p[1].toFixed(1)}" x2="${pp[i+1].p[0].toFixed(1)}" y2="${pp[i+1].p[1].toFixed(1)}" stroke="var(${TER[pp[i].ty]||"--asf"})" stroke-opacity=".12" stroke-width="3" stroke-linecap="round" ${NS}/>`; } });
+  } else {
+    for(let i=0;i<pts.length-1;i++){ if(pts[i].stop&&pts[i+1].stop) continue; s+=`<line x1="${pts[i].p[0].toFixed(1)}" y1="${pts[i].p[1].toFixed(1)}" x2="${pts[i+1].p[0].toFixed(1)}" y2="${pts[i+1].p[1].toFixed(1)}" stroke="var(${TER[pts[i].ty]||"--asf"})" stroke-width="4" stroke-linecap="round" opacity="${pts[i].t<=now?1:.22}" ${NS}/>`; }
+  }
+  // paradas
+  if(all){
+    const agg={}; days.forEach(p=>p.ev.filter(e=>e.k==="stop").forEach(e=>{ const a=agg[e.at]=agg[e.at]||{n:0,t:0,dur:0}; a.n++; a.t+=e.t0; a.dur+=e.t1-e.t0; }));
+    RT.agg=agg; const mxn=Math.max(...Object.values(agg).map(a=>a.n),1);
+    Object.entries(agg).forEach(([key,a])=>{ const [x,y]=PT(N[key]); const bad=PLACES[key]?.k==="proibido"; s+=`<circle cx="${x}" cy="${y}" r="${(4+10*Math.sqrt(a.n/mxn))*k*1.6}" fill="var(${bad?"--crit":"--accent"})" fill-opacity="${bad?.75:.45}" stroke="var(--surface)" stroke-width="1.5" ${NS}><title>${PLACES[key]?.n}: ${a.n} paradas</title></circle>`; });
+  } else {
+    let n=0; P0.ev.forEach(e=>{ if(e.k!=="stop") return; n++; const [x,y]=PT(N[e.at]); const bad=PLACES[e.at]?.k==="proibido"; const r=7*k*1.6; e._n=n;
+      s+=`<circle cx="${x}" cy="${y}" r="${r}" fill="var(${bad?"--crit":"--ink"})" stroke="var(--surface)" stroke-width="1.5" ${NS} opacity="${e.t0<=now?1:.35}"/><text x="${x}" y="${(y+r*0.42).toFixed(2)}" text-anchor="middle" font-size="${fs(10)}" style="fill:var(--surface);font-weight:700">${n}</text>`; });
+  }
+  // rótulos de locais
+  const usados=new Set((all?days:[P0]).flatMap(p=>p.ev.filter(e=>e.k==="stop").map(e=>e.at)));
+  Object.entries(PLACES).forEach(([key,p])=>{ const [x,y]=PT(N[key]); if(x<vb[0]||x>vb[0]+vb[2]||y<vb[1]||y>vb[1]+vb[3]) return;
+    const urb=["casa","refeicao","posto"].includes(p.k)||key==="OFF";
+    if(urb && k>0.12){ if(key==="INO") s+=`<text x="${(x+10*k*1.6).toFixed(1)}" y="${(y-8*k*1.6).toFixed(1)}" font-size="${fs(14)}" style="fill:var(--ink);font-weight:600">Inocência</text>`; return; }
+    if(p.k==="trabalho"&&key!=="OFF") s+=`<rect x="${x-6*k*1.6}" y="${y-6*k*1.6}" width="${12*k*1.6}" height="${12*k*1.6}" rx="${2*k}" fill="var(--accent)" opacity=".85"/>`;
+    s+=`<text x="${(x+10*k*1.6).toFixed(1)}" y="${(y-8*k*1.6).toFixed(1)}" font-size="${fs(p.k==="trabalho"?14:12)}" style="fill:${p.k==="proibido"?"var(--crit)":"var(--ink)"};font-weight:${p.k==="trabalho"||p.k==="proibido"?600:400}">${p.n}</text>`; });
+  TALHOES.forEach(t=>{ const [x,y]=PT(t.c); if(x<vb[0]||x>vb[0]+vb[2]||y<vb[1]||y>vb[1]+vb[3]) return; s+=`<text x="${x}" y="${y}" text-anchor="middle" font-size="${fs(11)}" style="fill:var(--accent)">${t.id}</text>`; });
+  if(!all && pts.length){ const pos=[...pts].reverse().find(q=>q.t<=now)||pts[0]; s+=`<circle cx="${pos.p[0]}" cy="${pos.p[1]}" r="${9*k*1.6}" fill="var(--ink)" stroke="var(--surface)" stroke-width="3" ${NS}/>`; }
+  // escala
+  const sk=(k>0.4?20:5)/KM_U; s+=`<g transform="translate(${vb[0]+vb[2]-sk-vb[2]*0.04} ${vb[1]+vb[3]*0.96})"><line x1="0" x2="${sk}" y1="0" y2="0" stroke="var(--ink)" stroke-width="2" ${NS}/><text x="${sk/2}" y="${-6*k*1.6}" text-anchor="middle" font-size="${fs(12)}" style="fill:var(--ink)">${k>0.4?20:5} km</text></g>`;
+  s+=`</svg>`;
+  rtMap.innerHTML=s;
+  renderSide(now);
+}
+function renderSide(now){
+  const v=RT.v, all=RT.mode==="all";
+  if(all){
+    const days=RT.planos.filter(p=>p.used);
+    const agg=Object.entries(RT.agg||{}).sort((a,b)=>b[1].n-a[1].n);
+    const occ=RT.planos.flatMap(p=>occOf(v,p));
+    rtSide.innerHTML=`<h2>Padrão em ${days.length} dias de uso</h2>
+      <p class="note" style="margin:0">Locais onde o veículo parou nos 90 dias, com horário médio de chegada. Locais proibidos em vermelho.</p>
+      <div class="tablewrap" style="max-height:380px"><table><thead><tr><th>Local</th><th class="r">Paradas</th><th class="r">Chega em média</th><th class="r">Fica em média</th></tr></thead><tbody>
+      ${agg.map(([key,a])=>{ const bad=PLACES[key]?.k==="proibido"; return `<tr style="${bad?"background:color-mix(in srgb,var(--crit) 8%,transparent)":""}"><td>${bad?'<i class="sev crit"></i>':""}${PLACES[key]?.n||key}</td><td class="r num">${a.n}</td><td class="r num">${hhmm(a.t/a.n)}</td><td class="r num">${durTxt(a.dur/a.n)}</td></tr>`; }).join("")}
+      </tbody></table></div>
+      <h3>Ocorrências no período: ${occ.length}</h3>
+      <div class="occlist">${occ.slice(-12).reverse().map(o=>`<button type="button" class="occi ${o.sev}" data-d="${o.d}" data-t="${o.t}"><b>${fmtDia(o.d)} ${hhmm(o.t)}</b> · ${o.tipo}<br><span class="note">${o.local} · ${durTxt(o.dur)}</span></button>`).join("")||'<span class="note">Nenhuma.</span>'}</div>`;
+    return;
+  }
+  const P=RT.planos[RT.d];
+  if(!P.ev.length){ rtSide.innerHTML=`<h2>${fmtDia(RT.d)}</h2><p class="lead">Veículo parado o dia todo em ${PLACES[P.home].n}. Nenhuma ignição registrada.</p>`; return; }
+  const st=dayStats(P), occ=occOf(v,P);
+  const pts=pointsOf(P), g=gapStats(pts);
+  let items=""; P.ev.forEach(e=>{
+    const past=e.t0<=now;
+    if(e.k==="stop"){ const pl=PLACES[e.at]; const bad=pl.k==="proibido";
+      items+=`<button type="button" class="tl ${bad?"bad":""} ${past?"":"fut"}" data-t="${e.t0}"><span class="tn" style="background:var(${bad?"--crit":"--ink"})">${e._n||""}</span><span><b>${hhmm(e.t0)}–${hhmm(e.t1)}</b> · ${pl.n} <span class="note">(${durTxt(e.t1-e.t0)})</span>${bad?`<br><span style="color:var(--crit);font-size:13px">${pl.why}</span>`:""}</span></button>`; }
+    else if(e.k==="field"){ items+=`<button type="button" class="tl drv ${past?"":"fut"}" data-t="${e.t0}"><span class="tn ln" style="background:var(--off)"></span><span>${hhmm(e.t0)}–${hhmm(e.t1)} · operação no talhão ${e.at} <span class="note">· ${e.km.toFixed(0)} km</span></span></button>`; }
+    else { const fast=e.legs.some(l=>l.ty==="t"&&l.s>60); const night=e.t0<5||e.t0>=22; items+=`<button type="button" class="tl drv ${past?"":"fut"} ${fast||night?"bad":""}" data-t="${e.t0}"><span class="tn ln" style="background:var(${e.legs.some(l=>l.ty==="t")?"--terra":"--asf"})"></span><span>${hhmm(e.t0)}–${hhmm(e.t1)} · ${e.km.toFixed(0)} km até ${PLACES[e.to]?.n||e.to} <span class="note">· máx ${Math.round(e.vmax)} km/h</span>${night?`<br><span style="color:var(--crit);font-size:13px">fora do horário</span>`:""}${fast?`<br><span style="color:var(--warn);font-size:13px">acima de 60 km/h em estrada de terra</span>`:""}</span></button>`; }
+  });
+  rtSide.innerHTML=`<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline"><h2>${fmtDia(RT.d)}</h2><span class="note">${occ.length?`<b style="color:var(--crit)">${occ.length} ocorrência${occ.length>1?"s":""}</b>`:"sem ocorrências"}</span></div>
+    <dl style="display:grid;grid-template-columns:auto 1fr;gap:3px 14px;margin:0;font-size:14px">
+      <dt class="note">Primeira ignição</dt><dd class="num" style="margin:0">${hhmm(st.ini)}</dd>
+      <dt class="note">Última parada</dt><dd class="num" style="margin:0">${hhmm(st.fim)}</dd>
+      <dt class="note">Distância</dt><dd class="num" style="margin:0">${Math.round(st.km)} km · ${pct(st.kmT.a/st.km)} asfalto, ${pct(st.kmT.t/st.km)} terra, ${pct(st.kmT.o/st.km)} talhão</dd>
+      <dt class="note">Rodando × parado</dt><dd class="num" style="margin:0">${durTxt(st.drive)} rodando · ${durTxt(st.idle)} parado</dd>
+      <dt class="note">Sem 4G</dt><dd class="num" style="margin:0">${pct(g.semSinal)} das posições · maior lacuna hoje ${durTxt(g.atual)}, na proposta ${durTxt(g.prop)}</dd>
+    </dl>
+    <h3>Linha do tempo</h3>
+    <div class="tlist">${items}</div>`;
+}
+
+// eventos
+(function(){
+  ocQ.addEventListener("input",renderOcc);
+  occChips.addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; RT.occFilter=b.dataset.t; renderOcc(); });
+  occGroupsEl.addEventListener("click",e=>{ const b=e.target.closest(".og"); if(b) goVehicle(b.dataset.v, +b.dataset.d, +b.dataset.t); });
+  document.addEventListener("click",e=>{ const f=e.target.closest("[data-ficha]"); if(f){ e.preventDefault(); goVehicle(f.dataset.ficha); } });
+  vpage.addEventListener("click",e=>{
+    const dv=e.target.closest("[data-dv]"); if(dv){ RT.dv=dv.dataset.dv; vpage.querySelectorAll("[data-dv]").forEach(b=>b.classList.toggle("on",b===dv)); soOccL.hidden=RT.dv==="cal"; renderDayList(); return; }
+    const cn=e.target.closest("[data-cal]"); if(cn){ RT.calM+= +cn.dataset.cal; renderCal(); return; }
+    const dr=e.target.closest(".dayrow,.mc[data-d]"); if(dr){ RT.d=+dr.dataset.d; RT.mode="dia"; RT.tSel=null; renderDayList(); drawRoute(); refreshBtns(); if(matchMedia("(max-width:760px)").matches) rtMap.scrollIntoView({block:"start"}); return; }
+    const m=e.target.closest("[data-mode]"); if(m){ RT.mode=m.dataset.mode; renderVehiclePage(); return; }
+    const z=e.target.closest("[data-zoom]"); if(z){ RT.zoom=z.dataset.zoom; renderVehiclePage(); return; }
+    const tl=e.target.closest(".tl"); if(tl){ RT.tSel=+tl.dataset.t+0.01; drawRoute(); return; }
+    const oi=e.target.closest(".occi"); if(oi){ RT.d=+oi.dataset.d; RT.mode="dia"; RT.tSel=+oi.dataset.t+0.01; renderVehiclePage(); return; }
+  });
+  vpage.addEventListener("change",e=>{ if(e.target.id==="soOcc"){ RT.soOcc=e.target.checked; renderDayList(); } });
+  vpage.addEventListener("input",e=>{ if(e.target.id==="rtT") drawRoute(); });
+  renderOcc();
+})();
+function refreshBtns(){ vpage.querySelectorAll("[data-mode]").forEach(b=>b.classList.toggle("on",b.dataset.mode===RT.mode)); }
+
+/* ---------- conectividade ---------- */
+(function(){
+  const prof = [["campo","Caminhonetes de campo"],["misto","Caminhonetes mistas"],["van","Vans"],["carro_terra","Carros em estrada de terra"],["urbano","Uso urbano"]];
+  const rows = prof.map(([k,n])=>{ const vs=V.filter(v=>v.perfil===k); return {n, c:vs.length, dark:1-vs.reduce((s,v)=>s+v.cob4g,0)/vs.length}; });
+  document.getElementById("covBars").innerHTML = rows.map(r=>`
+    <div style="display:grid;grid-template-columns:170px 1fr 48px;gap:10px;align-items:center;margin:7px 0">
+      <span style="font-size:13px">${r.n} <span class="note num">(${r.c})</span></span>
+      <div class="meter"><i style="width:${r.dark*100}%;background:${r.dark>.3?"var(--crit)":r.dark>.12?"var(--warn)":"var(--good)"}"></i></div>
+      <span class="num" style="text-align:right;font-size:13px">${pct(r.dark)}</span></div>`).join("");
+  const campo = V.filter(v=>v.perfil==="campo");
+  const amostra = V.find(v=>v.perfil==="campo"&&v.unidade==="UF Oeste") || campo[0];
+  const dAm = [...Array(NDIAS).keys()].reverse().find(d=>amostra.uso[d]==="1"&&isWeekday(d));
+  const gs = gapStats(pointsOf(planDay(amostra,dAm)));
+  const lag=gs.atual*60, lagP=gs.prop*60;
+  const satTrucks = V.filter(v=>v.perfil==="campo"||v.perfil==="van").length;
+  document.getElementById("conKpis").innerHTML = `
+    <div class="card kpi"><span class="l">Tempo sem 4G (caminhonetes de campo)</span><span class="v">${pct(1-campo.reduce((s,v)=>s+v.cob4g,0)/campo.length)}</span><span class="s">média simulada de ${campo.length} veículos</span></div>
+    <div class="card kpi"><span class="l">Maior tempo sem saber onde o veículo está, hoje</span><span class="v">${Math.floor(lag/60)}h${String(Math.round(lag%60)).padStart(2,"0")}</span><span class="s">${amostra.id} em ${fmtDia(dAm)}: posição só sobe no Wi-Fi</span></div>
+    <div class="card kpi hl"><span class="l">Maior tempo sem posição, na proposta</span><span class="v" style="color:var(--accent)">${Math.round(lagP)} min</span><span class="s">com satélite a cada 15 min</span></div>
+    <div class="card kpi"><span class="l">Veículos que precisariam de satélite</span><span class="v">${satTrucks}</span><span class="s">de ${V.length}; o resto fica só no 4G</span></div>`;
+})();
+</script>
+</body>
+</html>
