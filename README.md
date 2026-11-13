@@ -34,6 +34,24 @@ As fotos das caminhonetes são do Wikimedia Commons e estão embutidas no `templ
 
 Os créditos também aparecem na tela, na seção Câmeras do veículo.
 
+## O que mudou na v5
+
+- **Visual de produto:** menu lateral (no celular, barra inferior), título da tela no topo e busca global por placa, veículo ou condutor (atalho `/`). Os textos explicativos viraram um botão **i** ao lado do título.
+- **Foto com placa:** cada veículo aparece com foto e placa Mercosul na tabela, nas ocorrências, na busca e na página do veículo.
+- **Animação do trajeto:** na página do veículo, o botão ▶ faz o veículo percorrer o trajeto do dia, com velocidade 1×, 2× ou 5×. Nas paradas, a reprodução acelera.
+
+### Fotos de carros e vans
+
+Carregadas do Wikimedia Commons por link (`Special:FilePath`). Se a imagem não carregar, aparece uma ilustração no lugar.
+
+| Modelo | Arquivo no Commons |
+| --- | --- |
+| Fiat Cronos | Fiat_Cronos_1.8_16V_E.Torq_Precision.jpg |
+| Volkswagen Virtus | VW_Virtus_MSI_(Brazil,_front_view).png |
+| Chevrolet Onix Plus | Chevrolet_Onix_006.jpg |
+| Renault Master | Renault_master.JPG |
+| Mercedes-Benz Sprinter | P6010008_small.jpg (Jacek79, CC BY-SA 3.0) |
+
 ## Publicar (Cloudflare Pages)
 
 1. Cloudflare → Workers & Pages → Create → Pages → **Connect to Git** → `Pampa-Devs/frota-arauco`.
