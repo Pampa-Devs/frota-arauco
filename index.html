@@ -447,7 +447,7 @@ td{border-bottom-color:var(--line2)}
       <p class="note" style="margin:0">Cada ponto é uma caminhonete, com a cor do cargo de quem dirige. Canto inferior esquerdo: roda quase só no asfalto e quase nunca entra no talhão. Clique num ponto para abrir o veículo.</p>
       <div id="scatter" style="overflow-x:auto"></div>
       <div class="legend" id="scLegend"></div>
-      <h3 style="margin:8px 0 0">Cargo × uso real</h3>
+      <h3 style="margin:8px 0 0">O cargo bate com o uso?</h3>
       <p class="note" style="margin:0">O cargo diz se a pessoa deveria ir a campo; a telemetria diz se ela vai. Quando os dois concordam, a decisão é segura. Quando divergem, vale uma conversa com o gestor.</p>
       <div class="mx" id="cargoMx"></div>
     </div>
@@ -471,7 +471,7 @@ td{border-bottom-color:var(--line2)}
     <label for="fTipo">Tipo<select id="fTipo"><option value="">Todos</option><option>Caminhonete</option><option>Carro</option><option>Van</option></select></label>
     <label for="fRec">Recomendação<select id="fRec"><option value="">Todas</option><option>Desmobilizar</option><option>Trocar por carro</option><option>Revisar alocação</option><option>Manter</option></select></label>
     <label for="fUn">Unidade<select id="fUn"><option value="">Todas</option></select></label>
-    <label for="fMatch">Cargo × uso<select id="fMatch"><option value="">Todos</option><option value="troca">Confirmam a troca</option><option value="pool">Usar pool 4x4</option><option value="vcargo">Cargo de campo que não vai a campo</option><option value="vuso">Vai a campo sem cargo de campo</option><option value="precisa">Carro que precisa de caminhonete</option><option value="ok">Confirmam a caminhonete</option></select></label>
+    <label for="fMatch">Cargo × uso<select id="fMatch"><option value="">Todos</option><option value="troca">Pode trocar por carro</option><option value="pool">Carro fixo + caminhonete do pool</option><option value="vcargo">Cargo exige campo, mas não foi a campo</option><option value="vuso">Foi a campo sem cargo de campo</option><option value="precisa">Carro que precisa de caminhonete</option><option value="ok">Confirmam a caminhonete</option></select></label>
     <label for="fFlag">Alertas<select id="fFlag"><option value="">Todos</option><option value="1">Só com alerta</option></select></label>
     <label for="fQ">Buscar<input id="fQ" placeholder="ID, placa ou condutor"></label>
     <span id="fDiaChip"></span>
@@ -879,11 +879,11 @@ const GRUPO = {
 };
 // cruzamento cargo × uso real (só caminhonetes e carros)
 const MATCH = {
-  ok:{t:"Cargo e uso confirmam", pill:"p-man", d:"o cargo exige campo e o veículo vai mesmo a campo"},
-  troca:{t:"Cargo e uso confirmam a troca", pill:"p-troca", d:"cargo sem atividade de campo e o veículo roda no asfalto"},
-  pool:{t:"Usar pool 4x4 quando for a campo", pill:"p-troca", d:"vai a campo só de vez em quando; um carro resolve a rotina e o pool cobre as idas"},
-  vcargo:{t:"Cargo de campo que não vai a campo", pill:"p-rev", d:"conferir a agenda: ou a atividade de campo não está acontecendo, ou o veículo está com a pessoa errada"},
-  vuso:{t:"Vai a campo sem cargo de campo", pill:"p-crit", d:"entra em talhão sem ordem de serviço; desvio de uso ou empréstimo do veículo"},
+  ok:{t:"Uso bate com o cargo", pill:"p-man", d:"o cargo exige campo e o veículo vai mesmo a campo"},
+  troca:{t:"Pode trocar por carro", pill:"p-troca", d:"cargo sem atividade de campo e o veículo roda no asfalto"},
+  pool:{t:"Carro fixo + caminhonete do pool", pill:"p-troca", d:"vai a campo só de vez em quando; um carro resolve a rotina e o pool cobre as idas"},
+  vcargo:{t:"Cargo exige campo, mas não foi a campo", pill:"p-rev", d:"o cargo prevê ida a talhão, mas a telemetria quase não mostra estrada de terra nem talhão. Ou a atividade de campo não está acontecendo, ou o veículo está com a pessoa errada"},
+  vuso:{t:"Foi a campo sem cargo de campo", pill:"p-crit", d:"o cargo é de escritório, mas o veículo entra em talhão. Pode ser desvio de uso ou o veículo emprestado a outra pessoa"},
   precisa:{t:"Precisa de caminhonete", pill:"p-rev", d:"cargo de campo rodando de carro em estrada de terra"},
   carro:{t:"Carro adequado", pill:"p-man", d:"o carro atende o cargo e o uso"},
   van:{t:"Transporte coletivo", pill:"p-man", d:"fora da análise individual"},
@@ -1343,7 +1343,7 @@ function renderVehiclePage(){
       <div class="card">
         <h2>Ficha do veículo</h2>
         <dl class="ficha">
-          <dt>Condutor responsável</dt><dd><a href="#func-${v.func.mat}">${v.func.nome}</a> <span class="note">· ${v.func.cargo}</span>${v.match!=="van"?`<br><span class="pill ${MATCH[v.match].pill}">${MATCH[v.match].t}</span>`:""}</dd>
+          <dt>Condutor responsável</dt><dd><a href="#func-${v.func.mat}">${v.func.nome}</a> <span class="note">· ${v.func.cargo}</span>${v.match!=="van"?`<br><span class="pill ${MATCH[v.match].pill}">${MATCH[v.match].t}</span><br><span class="note">${MATCH[v.match].d.charAt(0).toUpperCase()+MATCH[v.match].d.slice(1)}.</span>`:""}</dd>
           <dt>Modelo</dt><dd>${F.modelo} · ${F.ano} · ${F.cor}</dd>
           <dt>Entrada na frota</dt><dd>${fmtData(F.entrada)} <span class="note">· há ${tempoTxt(F.vida)}</span></dd>
           <dt>Km na aquisição</dt><dd>${F.zero?"0 km (veículo novo)":`${kmFmt(F.kmAq)} (seminovo)`}</dd>
@@ -1536,7 +1536,7 @@ function drawRoute(){
     if(p.k==="trabalho"&&key!=="OFF") s+=`<rect x="${x-6*k*1.6}" y="${y-6*k*1.6}" width="${12*k*1.6}" height="${12*k*1.6}" rx="${2*k}" fill="var(--accent)" opacity=".85"/>`;
     s+=`<text x="${(x+10*k*1.6).toFixed(1)}" y="${(y-8*k*1.6).toFixed(1)}" font-size="${fs(p.k==="trabalho"?14:12)}" style="fill:${p.k==="proibido"?"var(--crit)":"var(--ink)"};font-weight:${p.k==="trabalho"||p.k==="proibido"?600:400}">${p.n}</text>`; });
   TALHOES.forEach(t=>{ const [x,y]=PT(t.c); if(x<vb[0]||x>vb[0]+vb[2]||y<vb[1]||y>vb[1]+vb[3]) return; s+=`<text x="${x}" y="${y}" text-anchor="middle" font-size="${fs(11)}" style="fill:var(--accent)">${t.id}</text>`; });
-  // câmeras: ícone em cada ponto; no modo dia, a foto aparece no mapa ligada à câmera
+  // câmeras: ícone em cada ponto; no modo dia, a foto aparece só quando o veículo passa pela câmera
   const dentro=(x,y)=>x>=vb[0]&&x<=vb[0]+vb[2]&&y>=vb[1]&&y<=vb[1]+vb[3];
   const capsVis = all ? (RT.caps||[]) : (RT.caps||[]).filter(c=>c.d===RT.d);
   RT.mapCaps = capsVis.slice().sort((a,b)=>a.t-b.t);
@@ -1548,8 +1548,12 @@ function drawRoute(){
       <circle cx="${cx}" cy="${cy}" r="${z*0.4}" fill="${n?"var(--surface)":cor}"/>
       ${n?`<circle cx="${cx+z}" cy="${cy-z*0.75}" r="${z*0.66}" fill="var(--ink)"/><text x="${cx+z}" y="${(cy-z*0.75+z*0.3).toFixed(2)}" text-anchor="middle" font-size="${(z*0.85).toFixed(2)}" style="fill:var(--surface);font-weight:700">${n}</text>`:""}</g>`; });
   if(!all){
+    // só a câmera por onde o veículo acabou de passar mostra a foto (some depois de ~45 min do horário do mapa)
+    const recentes=RT.mapCaps.map((c,i)=>i).filter(i=>RT.mapCaps[i].t<=now && now-RT.mapCaps[i].t<=0.75 && now<(RT.ptsDay||pts).at(-1).t-1e-6);
+    const ultima=recentes.length?recentes.at(-1):null;
     Object.entries(porCam).forEach(([key,idx])=>{ const [x0,y0]=PT(N[key]); if(!dentro(x0,y0)) return;
-      const vis=idx.filter(i=>RT.mapCaps[i].t<=now), i=vis.length?vis.at(-1):idx[0], c=RT.mapCaps[i], fut=!vis.length;
+      if(ultima==null || !idx.includes(ultima)) return;
+      const i=ultima, c=RT.mapCaps[i], fut=false;
       const tw=Math.min(190*k, vb[2]*0.3), th=tw*0.5625, pad=4*k;
       let tx=x0-tw-26*k, ty=y0-th-24*k;
       tx=Math.max(vb[0]+pad, Math.min(tx, vb[0]+vb[2]-tw-pad)); ty=Math.max(vb[1]+pad, Math.min(ty, vb[1]+vb[3]-th-pad));
