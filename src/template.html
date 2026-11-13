@@ -1578,9 +1578,12 @@ function drawRoute(){
       if(ultima==null || !idx.includes(ultima)) return;
       const i=ultima, c=RT.mapCaps[i], fut=false;
       const tw=Math.min(190*k, vb[2]*0.3), th=tw*0.5625, pad=4*k;
-      let tx=x0-tw-26*k, ty=y0-th-24*k;
-      tx=Math.max(vb[0]+pad, Math.min(tx, vb[0]+vb[2]-tw-pad)); ty=Math.max(vb[1]+pad, Math.min(ty, vb[1]+vb[3]-th-pad));
-      s+=`<line x1="${x0-13*k*1.6}" y1="${y0+12*k*1.6}" x2="${tx+tw/2}" y2="${ty+th}" stroke="${c.alerta?"var(--crit)":"var(--ink)"}" stroke-width="1.2" opacity="${fut?.3:.7}" ${NS}/>`;
+      // foto logo acima do checkpoint (câmera), com uma seta apontando para ele
+      const cx=x0-13*k*1.6, cy=y0+12*k*1.6, gap=12*k*1.6;
+      let tx=cx-tw/2, ty=cy-gap-th;
+      tx=Math.max(vb[0]+pad, Math.min(tx, vb[0]+vb[2]-tw-pad)); ty=Math.max(vb[1]+pad, ty);
+      const ax=Math.max(tx+6*k, Math.min(cx, tx+tw-6*k));
+      s+=`<path d="M${(ax-6*k).toFixed(2)},${(ty+th+2*k).toFixed(2)} L${ax.toFixed(2)},${(cy-6*k*1.6).toFixed(2)} L${(ax+6*k).toFixed(2)},${(ty+th+2*k).toFixed(2)} Z" fill="${c.alerta?"var(--crit)":"var(--surface)"}"/>`;
       s+=`<g class="mapfoto" data-cap="m${i}" role="button" tabindex="0" aria-label="Ampliar foto da ${c.cam.id} às ${hhmm(c.t)}" opacity="${fut?.4:1}"><title>${c.cam.id} · ${hhmm(c.t)}${fut?" (mais tarde no dia)":""} · clique para ampliar</title>
         <rect x="${tx-2.5*k}" y="${ty-2.5*k}" width="${tw+5*k}" height="${th+5*k}" rx="${3*k}" fill="${c.alerta?"var(--crit)":"var(--surface)"}"/>
         <svg x="${tx}" y="${ty}" width="${tw}" height="${th}" viewBox="0 0 320 180">${fotoInner(c,v)}</svg>
