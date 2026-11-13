@@ -186,6 +186,12 @@ ul.clean li{margin:3px 0}
   #tbl th,#tbl td{padding:7px 6px;font-size:12.5px} #tbl th[aria-sort]::after{content:""} #tbl td:nth-child(1) .note{display:block}
   .tablewrap{max-height:420px}
 }
+.mx#cargoMx{display:flex;flex-direction:column;gap:10px}
+.acao-c{border:1px solid var(--line);border-left:4px solid var(--c);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.acao-h{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.acao-v{display:flex;gap:10px;align-items:center;text-align:left;border:none;background:none;padding:5px 6px;margin:0 -6px;border-radius:7px;font-size:13px;line-height:1.35}
+.acao-v:hover{background:var(--accent-soft)}
+.lnkbtn{align-self:flex-start;border:none;background:none;padding:2px 0;color:var(--accent);font-weight:600;font-size:13px}
 .oglist{display:flex;flex-direction:column;gap:8px}
 .og{display:grid;grid-template-columns:200px minmax(0,1fr) 150px;gap:14px;align-items:center;text-align:left;padding:12px 14px;border-left:4px solid var(--crit);font-size:14px;line-height:1.45}
 .og.warn{border-left-color:var(--warn)} .og:hover{background:var(--accent-soft)}
@@ -446,7 +452,7 @@ td{border-bottom-color:var(--line2)}
       <p class="note" style="margin:0">Cada ponto é uma caminhonete, com a cor do cargo de quem dirige. Canto inferior esquerdo: roda quase só no asfalto e quase nunca entra no talhão. Clique num ponto para abrir o veículo.</p>
       <div id="scatter" style="overflow-x:auto"></div>
       <div class="legend" id="scLegend"></div>
-      <h3 style="margin:8px 0 0">O cargo bate com o uso?</h3>
+      <h3 style="margin:8px 0 0">O que fazer com cada veículo</h3>
       <p class="note" style="margin:0">O cargo diz se a pessoa deveria ir a campo; a telemetria diz se ela vai. Quando os dois concordam, a decisão é segura. Quando divergem, vale uma conversa com o gestor.</p>
       <div class="mx" id="cargoMx"></div>
     </div>
@@ -1054,13 +1060,30 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-go]"); if
   document.getElementById("scatter").addEventListener("click", abreSc);
   document.getElementById("scatter").addEventListener("keydown", e=>{ if(e.key==="Enter") abreSc(e); });
 
-  // matriz cargo × uso real
-  const cel = (g,campo) => pick.filter(v=>v.func.g===g && v.func.usoCampo===campo);
-  const linha = g => { const a=cel(g,true), b=cel(g,false), ka=a[0]?.match||(g==="escritorio"?"vuso":"ok"), kb=b[0]?.match||(g==="campo"?"vcargo":g==="misto"?"pool":"troca");
-    const c = (arr,k) => `<button type="button" class="mxc m-${k}" data-mx="${k}" ${arr.length?"":"disabled"}><b class="num">${arr.length}</b><span>${MATCH[k].t}</span>${arr.length&&(k==="troca"||k==="pool")?`<span class="note num">${brl(arr.reduce((s,v)=>s+v.eco,0))}/mês</span>`:""}</button>`;
-    return `<div class="mxr"><span class="mxl"><i class="sw" style="background:var(${GRUPO[g].cor})"></i>${GRUPO[g].n}</span>${c(a,ka)}${c(b,kb)}</div>`; };
-  document.getElementById("cargoMx").innerHTML = `<div class="mxr mxh"><span></span><span>Vai a campo</span><span>Roda no asfalto</span></div>`+["campo","misto","escritorio"].map(linha).join("");
-  document.getElementById("cargoMx").addEventListener("click",e=>{ const b=e.target.closest("[data-mx]"); if(b) goMatch(b.dataset.mx); });
+  // cargo × uso real, organizado pelo que o diretor precisa fazer
+  const motivoAcao = v => ({
+    troca:`${v.func.cargo}: ${pct(v.asf)} do km no asfalto, talhão em ${pct(v.dias_talhao)} dos dias`,
+    pool:`${v.func.cargo}: vai a campo só em ${pct(v.dias_talhao)} dos dias`,
+    vcargo:`${v.func.cargo}: deveria ir a campo, mas ${pct(v.asf)} do km é asfalto`,
+    vuso:`${v.func.cargo}: cargo de escritório, entrou em talhão em ${pct(v.dias_talhao)} dos dias`,
+    precisa:`${v.func.cargo}: carro com ${pct(v.terra+v.off)} do km em terra`,
+  })[v.match];
+  const ACOES = [
+    {k:"agora", t:"Decidir agora", d:"Cargo e uso real concordam: não precisa de caminhonete fixa.", cor:"--good", ms:["troca","pool"]},
+    {k:"gestor", t:"Conversar com o gestor", d:"Cargo e uso não batem. Pode ser atividade de campo parada ou veículo com outra pessoa.", cor:"--warn", ms:["vcargo","vuso"]},
+    {k:"seg", t:"Corrigir por segurança", d:"Cargo de campo andando de carro em estrada de terra.", cor:"--crit", ms:["precisa"]},
+  ];
+  document.getElementById("cargoMx").innerHTML = ACOES.map(a=>{
+    const vs=V.filter(v=>a.ms.includes(v.match)).sort((x,y)=>(y.eco||0)-(x.eco||0)||x.dias_talhao-y.dias_talhao);
+    const eco=vs.reduce((s,v)=>s+(v.eco||0),0);
+    const porUn={}; vs.forEach(v=>porUn[v.unidade]=(porUn[v.unidade]||0)+1);
+    return `<div class="acao-c" style="--c:var(${a.cor})">
+      <div class="acao-h"><b>${a.t}</b><span class="num"><b>${vs.length}</b> veículo${vs.length===1?"":"s"}${a.k==="agora"&&eco?` · <b style="color:var(--accent)">${brl(eco)}/mês</b>`:""}</span></div>
+      <p class="note" style="margin:0">${a.d}${a.k==="gestor"&&vs.length?` Por unidade: ${Object.entries(porUn).sort((x,y)=>y[1]-x[1]).map(([u,n])=>`${u} ${n}`).join(", ")}.`:""}</p>
+      ${vs.slice(0,3).map(v=>`<button type="button" class="acao-v" data-vgo="${v.id}">${placaHTML(v.placa,true)}<span><b>${v.func.nome}</b><br><span class="note">${motivoAcao(v)}</span></span></button>`).join("")}
+      ${vs.length>3?`<button type="button" class="lnkbtn" data-mx="${a.ms[0]}">Ver os ${vs.length} →</button>`:""}
+    </div>`; }).join("");
+  document.getElementById("cargoMx").addEventListener("click",e=>{ const g=e.target.closest("[data-vgo]"); if(g){ goVehicle(g.dataset.vgo); return; } const b=e.target.closest("[data-mx]"); if(b) goMatch(b.dataset.mx); });
 
   // por unidade
   const byU = UNS.map(u=>({u, ...RES.porUnidade[u], eco:V.filter(v=>v.unidade===u).reduce((s,v)=>s+v.eco,0)}));
