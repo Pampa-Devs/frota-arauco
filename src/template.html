@@ -1571,8 +1571,8 @@ function drawRoute(){
       <circle cx="${cx}" cy="${cy}" r="${z*0.4}" fill="${n?"var(--surface)":cor}"/>
       ${n?`<circle cx="${cx+z}" cy="${cy-z*0.75}" r="${z*0.66}" fill="var(--ink)"/><text x="${cx+z}" y="${(cy-z*0.75+z*0.3).toFixed(2)}" text-anchor="middle" font-size="${(z*0.85).toFixed(2)}" style="fill:var(--surface);font-weight:700">${n}</text>`:""}</g>`; });
   if(!all){
-    // só a câmera por onde o veículo acabou de passar mostra a foto (some depois de ~45 min do horário do mapa)
-    const recentes=RT.mapCaps.map((c,i)=>i).filter(i=>RT.mapCaps[i].t<=now && now-RT.mapCaps[i].t<=0.75 && now<(RT.ptsDay||pts).at(-1).t-1e-6);
+    // só a câmera por onde o veículo acabou de passar mostra a foto (some depois de ~45 min do horário do mapa); vale também no fim do dia
+    const recentes=RT.mapCaps.map((c,i)=>i).filter(i=>RT.mapCaps[i].t<=now+0.02 && now-RT.mapCaps[i].t<=0.75);
     const ultima=recentes.length?recentes.at(-1):null;
     Object.entries(porCam).forEach(([key,idx])=>{ const [x0,y0]=PT(N[key]); if(!dentro(x0,y0)) return;
       if(ultima==null || !idx.includes(ultima)) return;
