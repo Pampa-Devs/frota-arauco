@@ -52,6 +52,16 @@ Carregadas do Wikimedia Commons por link (`Special:FilePath`). Se a imagem não 
 | Renault Master | Renault_master.JPG |
 | Mercedes-Benz Sprinter | P6010008_small.jpg (Jacek79, CC BY-SA 3.0) |
 
+## Branch `clean-minimal`
+
+- **Login simulado:** qualquer e-mail e senha. A sessão fica só na aba do navegador.
+- **Perfis de acesso:**
+  - **Diretoria:** vê tudo.
+  - **Gestor de unidade:** escolhe a unidade e vê só a frota, os custos e as ocorrências dela.
+  - **Analista de frota:** ocorrências, veículos, trajetos e conectividade. Não vê a visão geral de economia.
+  - **Segurança e compliance:** só ocorrências e histórico de trajetos.
+- **Visual minimalista:** indicadores numa faixa só, selos como ponto colorido, menos bordas e cores, sem o gráfico de dispersão na visão geral.
+
 ## Publicar (Cloudflare Pages)
 
 1. Cloudflare → Workers & Pages → Create → Pages → **Connect to Git** → `Pampa-Devs/frota-arauco`.
